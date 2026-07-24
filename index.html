@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SRE / DevOps Learning Hub — Docker, Kubernetes &amp; Incident Management</title>
+<meta name="description" content="Hands-on Docker & Kubernetes lab, an SRE interview study console, and incident-management resources." />
+<style>
+  :root{
+    --ink:#0F1E2E; --bg:#EEF3F8; --card:#FFFFFF; --line:#E2E8F0; --text:#1E293B; --muted:#64748B;
+    --docker:#2496ED; --k8s:#4257D6; --primary:#2563EB; --teal:#0EA5B7; --amber:#E8912A;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.55}
+  a{color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  header{background:linear-gradient(120deg,#0F1E2E,#15304d);color:#fff;border-bottom:3px solid var(--teal);padding:54px 0 60px}
+  .badge{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:#8fd6de;background:rgba(14,165,183,.15);border:1px solid rgba(14,165,183,.4);padding:5px 12px;border-radius:20px;margin-bottom:18px}
+  header h1{font-size:38px;font-weight:800;letter-spacing:-.02em;max-width:760px;line-height:1.12}
+  header p{font-size:17px;color:#B9CBDD;margin-top:16px;max-width:640px}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+  .logo b{font-size:15px;font-weight:700}
+  .logo span{font-size:12px;color:#9FB3C8;display:block}
+
+  main{padding:44px 0 30px}
+  .sec-label{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:8px 0 16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}header h1{font-size:29px}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;display:flex;flex-direction:column;
+    box-shadow:0 1px 3px rgba(16,30,46,.05);transition:.18s}
+  .card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(16,30,46,.10)}
+  .card .ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .card h3{font-size:20px;color:var(--ink);font-weight:750;letter-spacing:-.01em}
+  .card .tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+  .card .tags span{font-size:11.5px;font-weight:600;color:#0b6b76;background:#EAFAFB;border:1px solid #BEE9ED;padding:3px 9px;border-radius:6px}
+  .card p{font-size:14.5px;color:#475569;flex:1}
+  .card .cta{margin-top:18px;align-self:flex-start;background:var(--primary);color:#fff;text-decoration:none;
+    font-size:14px;font-weight:650;padding:11px 20px;border-radius:10px}
+  .card .cta:hover{filter:brightness(1.08)}
+  .card.feature{grid-column:1 / -1;flex-direction:row;gap:26px;align-items:center}
+  .card.feature .ico{width:60px;height:60px;flex:none}
+  @media(max-width:720px){.card.feature{flex-direction:column;align-items:flex-start}}
+
+  .downloads{margin-top:40px}
+  .dl-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:720px){.dl-list{grid-template-columns:1fr}}
+  .dl{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+    text-decoration:none;transition:.15s}
+  .dl:hover{border-color:var(--amber);background:#FFFBF4}
+  .dl .fico{width:40px;height:40px;border-radius:9px;background:#FCF0DC;color:#8a5a12;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;font-weight:700;flex:none}
+  .dl .nm{font-size:14.5px;font-weight:650;color:var(--ink)}
+  .dl .sub{font-size:12.5px;color:var(--muted)}
+
+  footer{border-top:1px solid var(--line);margin-top:50px;padding:28px 0 46px;color:var(--muted);font-size:13.5px}
+  footer b{color:var(--ink)}
+  footer a{color:var(--primary);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">
+      <svg width="34" height="34" viewBox="0 0 30 30" fill="none">
+        <rect x="2" y="15" width="7" height="7" rx="1.2" fill="#38E1D6"/><rect x="10" y="15" width="7" height="7" rx="1.2" fill="#2496ED"/>
+        <rect x="18" y="15" width="7" height="7" rx="1.2" fill="#8ea2ff"/><rect x="6" y="7" width="7" height="7" rx="1.2" fill="#2496ED"/>
+        <rect x="14" y="7" width="7" height="7" rx="1.2" fill="#38E1D6"/>
+        <path d="M2 24 q13 5 26 0" stroke="#4257D6" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div><b>SRE / DevOps Learning Hub</b><span>Practical container &amp; reliability skills</span></div>
+    </div>
+    <span class="badge">Docker · Kubernetes · Incident Management</span>
+    <h1>Learn containers and site reliability by doing, not just reading.</h1>
+    <p>A hands-on Docker &amp; Kubernetes lab with a real simulated terminal, an SRE interview study console, and a set of incident-management resources — all in one place.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="sec-label">Interactive tools</div>
+  <div class="grid">
+    <div class="card feature">
+      <div class="ico" style="background:#E7F2FE"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="2" y="14" width="7" height="6" rx="1" fill="#2496ED"/><rect x="9" y="14" width="7" height="6" rx="1" fill="#38E1D6"/><rect x="16" y="14" width="7" height="6" rx="1" fill="#8ea2ff"/><rect x="6" y="8" width="7" height="6" rx="1" fill="#2496ED"/><path d="M2 22 q13 4 26 0" stroke="#4257D6" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+      <div style="flex:1">
+        <h3>Container Lab — Docker &amp; Kubernetes</h3>
+        <div class="tags"><span>54 lessons</span><span>Self-managed + Cloud</span><span>Live terminal</span><span>Real-world troubleshooting</span></div>
+        <p>Concept-by-concept from “what is a container?” to Helm, HPA, and managed clusters (EKS/AKS/GKE). Type real <code>docker</code> and <code>kubectl</code> commands into a simulated terminal, split into <b>self-managed (on-prem)</b> and <b>cloud (managed)</b> tracks, with an official-docs link on every lesson and hands-on debugging challenges.</p>
+      </div>
+      <a class="cta" href="container-lab.html">Open the lab →</a>
+    </div>
+
+    <div class="card">
+      <div class="ico" style="background:#EAFAFB"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4z" stroke="#0EA5B7" stroke-width="2" rx="2"/><path d="M7 9l3 3-3 3M13 15h4" stroke="#0EA5B7" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>SRE Interview Study Console</h3>
+      <div class="tags"><span>Study modules</span><span>Flashcards</span><span>Mock SEV1</span></div>
+      <p>An “on-call ready” study console covering the core SRE interview areas — SLIs/SLOs, observability, incident response, and more — with drill flashcards, a mock incident, and a readiness gauge.</p>
+      <a class="cta" href="sre-interview-console.html">Open the console →</a>
+    </div>
+
+    <div class="card">
+      <div class="ico" style="background:#FCF0DC"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" stroke="#E8912A" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="#E8912A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>Incident Management Playbook &amp; Prep</h3>
+      <div class="tags"><span>Playbook</span><span>Q&amp;A bank</span><span>Resume defense</span></div>
+      <p>Downloadable references below: a deep-dive incident-management playbook, an interview Q&amp;A bank, a resume-defense guide, and a shareable one-page infographic.</p>
+      <a class="cta" href="#downloads">Jump to downloads →</a>
+    </div>
+  </div>
+
+  <div class="downloads" id="downloads">
+    <div class="sec-label">Downloadable resources</div>
+    <div class="dl-list">
+      <a class="dl" href="Incident-Management-Playbook.docx"><span class="fico">DOCX</span><span><span class="nm">Incident Management Playbook</span><br><span class="sub">Detection → recovery, severity, RCA, postmortems</span></span></a>
+      <a class="dl" href="SRE-Interview-Prep.docx"><span class="fico">DOCX</span><span><span class="nm">SRE Interview Q&amp;A Bank</span><br><span class="sub">~70 questions across 8 JD areas + scenarios</span></span></a>
+      <a class="dl" href="Resume-Interview-Prep.docx"><span class="fico">DOCX</span><span><span class="nm">Resume Defense Guide</span><br><span class="sub">Every claim → likely question + how to answer</span></span></a>
+      <a class="dl" href="Incident-Management-Pamphlet.png"><span class="fico">PNG</span><span><span class="nm">Incident Response Infographic</span><br><span class="sub">One-page visual, ready for LinkedIn</span></span></a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Built by <b>Tenil Sridhar</b> · A personal learning &amp; portfolio project.
+    &nbsp;•&nbsp; Source on <a href="https://github.com/Tenilsridhar">GitHub</a>.
+    &nbsp;•&nbsp; The tools run entirely in your browser — no data leaves your machine.
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Container Lab — Learn Docker &amp; Kubernetes by Doing</title>
+<style>
+  :root{
+    --ink:#0F1E2E; --bg:#EEF3F8; --card:#FFFFFF; --line:#E2E8F0;
+    --text:#1E293B; --muted:#64748B;
+    --docker:#2496ED; --k8s:#4257D6; --primary:#2563EB; --teal:#0EA5B7;
+    --amber:#E8912A; --amber-soft:#FCF0DC; --green:#16A34A; --red:#DC2626;
+    --term-bg:#0B1220; --term-text:#D7E0EA; --term-green:#4ADE80;
+    --term-cyan:#38E1D6; --term-dim:#5B6b80; --term-red:#F87171; --term-amber:#FBBF24;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","Fira Code",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);overflow:hidden}
+  button{font-family:inherit;cursor:pointer}
+
+  /* ---------- top bar ---------- */
+  header{
+    height:60px;display:flex;align-items:center;gap:18px;padding:0 20px;
+    background:linear-gradient(100deg,#0F1E2E,#15304d);color:#fff;flex:none;
+    border-bottom:3px solid var(--teal);
+  }
+  .logo{display:flex;align-items:center;gap:11px}
+  .logo svg{flex:none}
+  .logo b{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .logo span{font-size:12px;color:#9FB3C8;display:block;margin-top:1px}
+  .tracks{display:flex;gap:6px;margin-left:8px}
+  .tracks button{
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#cfe0f0;
+    padding:7px 15px;border-radius:8px;font-size:13.5px;font-weight:600;transition:.15s;
+    display:flex;align-items:center;gap:7px;
+  }
+  .tracks button .dot{width:8px;height:8px;border-radius:50%}
+  .tracks button[data-track="docker"] .dot{background:var(--docker)}
+  .tracks button[data-track="k8s"] .dot{background:#8ea2ff}
+  .tracks button:hover{background:rgba(255,255,255,.14);color:#fff}
+  .tracks button.active{background:#fff;color:var(--ink)}
+  .tracks button.active[data-track="k8s"] .dot{background:var(--k8s)}
+  .progress-wrap{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .progress-wrap .txt{font-size:12px;color:#9FB3C8;text-align:right}
+  .progress-wrap .txt b{color:#fff;font-size:15px}
+  .ring{--p:0}
+  .ring svg{transform:rotate(-90deg)}
+
+  /* ---------- layout ---------- */
+  .shell{display:grid;grid-template-columns:260px 1fr 520px;height:calc(100% - 60px)}
+  @media(max-width:1180px){ .shell{grid-template-columns:230px 1fr;} .term-col{display:none} }
+
+  /* sidebar */
+  .side{background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding:10px 0}
+  .side .sec{padding:14px 18px 6px;font-size:11px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted)}
+  .side .grouphdr{padding:14px 16px 10px;margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.04em;
+    color:var(--ink);background:linear-gradient(90deg,#e8eef6,transparent);border-top:1px solid var(--line)}
+  .side .grouphdr:first-child{border-top:0;margin-top:0}
+  .card.docs .tag{color:var(--teal)}
+  .doclinks{display:flex;flex-wrap:wrap;gap:8px}
+  .doclinks a{font-size:13px;color:#0b6b76;background:#EAFAFB;border:1px solid #BEE9ED;border-radius:8px;
+    padding:6px 12px;text-decoration:none;font-weight:600;transition:.12s}
+  .doclinks a:hover{background:#0EA5B7;color:#fff;border-color:#0EA5B7}
+  .side .item{
+    display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13.5px;color:#334155;
+    border-left:3px solid transparent;transition:.12s;cursor:pointer;
+  }
+  .side .item:hover{background:#F1F5F9}
+  .side .item.active{background:#EFF4FF;border-left-color:var(--primary);color:var(--ink);font-weight:600}
+  .side .item .tick{width:18px;height:18px;border-radius:50%;border:2px solid #CBD5E1;flex:none;
+    display:flex;align-items:center;justify-content:center;transition:.15s}
+  .side .item.done .tick{background:var(--green);border-color:var(--green)}
+  .side .item.done .tick svg{display:block}
+  .side .item .tick svg{display:none}
+  .side .item .n{flex:1;line-height:1.25}
+
+  /* main lesson column */
+  .main{overflow-y:auto;padding:26px 34px 60px}
+  .crumbs{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .main h1{font-size:29px;font-weight:800;color:var(--ink);margin:6px 0 4px;letter-spacing:-.02em}
+  .lesson-meta{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(16,30,46,.04)}
+  .card .tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .card.concept .tag{color:var(--teal)}
+  .card.task .tag{color:var(--primary)}
+  .card p{font-size:15px;line-height:1.6;color:#334155;margin-bottom:10px}
+  .card p:last-child{margin-bottom:0}
+  .card b{color:var(--ink)}
+  .analogy{background:#F0FBFC;border-left:4px solid var(--teal);border-radius:8px;padding:12px 16px;margin:12px 0;
+    font-size:14.5px;color:#155e63}
+  .analogy b{color:#0b3f43}
+  code,.k{font-family:var(--mono);font-size:13px;background:#0F1E2E;color:#8ee6ff;padding:2px 7px;border-radius:6px;
+    white-space:nowrap}
+  .card p code{white-space:normal}
+  pre.file{background:#0B1220;color:#D7E0EA;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+    padding:14px 16px;border-radius:10px;overflow-x:auto;margin:12px 0;border:1px solid #1e2b3d}
+  pre.file .c{color:#5B6b80}
+  pre.file .kw{color:#7CC4FF}
+  pre.file .st{color:#9EE493}
+
+  .do-cmd{display:flex;align-items:center;gap:12px;background:#0F1E2E;border-radius:10px;padding:12px 14px;margin:14px 0 6px}
+  .do-cmd .p{color:var(--term-green);font-family:var(--mono);font-weight:700}
+  .do-cmd code{background:none;color:#e8f2ff;font-size:13.5px;padding:0;white-space:pre-wrap;flex:1}
+  .do-cmd button{background:var(--primary);color:#fff;border:0;border-radius:7px;padding:7px 13px;font-size:12.5px;
+    font-weight:600;white-space:nowrap}
+  .do-cmd button:hover{filter:brightness(1.08)}
+  .steps-note{font-size:13px;color:var(--muted);margin-top:4px}
+
+  /* issues accordion */
+  .issues .tag{color:var(--amber)}
+  .issue{border:1px solid #F0E2C8;background:var(--amber-soft);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .issue summary{list-style:none;cursor:pointer;padding:12px 15px;font-size:14px;font-weight:600;color:#7a5312;
+    display:flex;align-items:center;gap:10px}
+  .issue summary::-webkit-details-marker{display:none}
+  .issue summary .err{font-family:var(--mono);font-size:12px;background:#fff;border:1px solid #e7cfa2;color:#a4442a;
+    padding:2px 8px;border-radius:5px;white-space:nowrap}
+  .issue summary .chev{margin-left:auto;transition:.2s;color:#b98a3f}
+  .issue[open] summary .chev{transform:rotate(90deg)}
+  .issue .body{padding:0 15px 14px 15px;font-size:14px;line-height:1.55;color:#5c4a2a}
+  .issue .body .lbl{font-weight:700;color:#7a5312}
+  .issue .body code{background:#0F1E2E;color:#8ee6ff}
+
+  .navrow{display:flex;gap:12px;margin-top:22px}
+  .navrow button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;
+    padding:11px 20px;font-size:14px;font-weight:600}
+  .navrow button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .navrow button.primary:hover{filter:brightness(1.07)}
+  .navrow button:disabled{opacity:.4;cursor:not-allowed}
+  .navrow .spacer{flex:1}
+
+  /* terminal column */
+  .term-col{background:var(--term-bg);display:flex;flex-direction:column;border-left:1px solid #06101d}
+  .term-head{height:42px;display:flex;align-items:center;gap:9px;padding:0 14px;background:#0a1524;
+    border-bottom:1px solid #14233a;flex:none}
+  .term-head .lights{display:flex;gap:6px}
+  .term-head .lights i{width:11px;height:11px;border-radius:50%;display:block}
+  .term-head .lights i:nth-child(1){background:#ff5f57}
+  .term-head .lights i:nth-child(2){background:#febc2e}
+  .term-head .lights i:nth-child(3){background:#28c840}
+  .term-head .ttl{font-family:var(--mono);font-size:12px;color:#7f92a8;margin-left:4px}
+  .term-head .reset{margin-left:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    color:#9fb3c8;font-size:11.5px;padding:5px 11px;border-radius:6px;font-family:var(--mono)}
+  .term-head .reset:hover{color:#fff;background:rgba(255,255,255,.12)}
+  .term-body{flex:1;overflow-y:auto;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.5}
+  .term-body .line{white-space:pre-wrap;word-break:break-word}
+  .term-body .l-cmd{color:#fff}
+  .term-body .l-cmd .pr{color:var(--term-green);font-weight:700}
+  .term-body .l-cmd .pr.ctr{color:var(--term-cyan)}
+  .term-body .l-ok{color:var(--term-green)}
+  .term-body .l-err{color:var(--term-red)}
+  .term-body .l-warn{color:var(--term-amber)}
+  .term-body .l-info{color:var(--term-text)}
+  .term-body .l-dim{color:var(--term-dim)}
+  .term-body .l-head{color:#9fb3c8;font-weight:700}
+  .term-input{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid #14233a;flex:none;background:#0a1524}
+  .term-input .pr{color:var(--term-green);font-family:var(--mono);font-weight:700;font-size:13px}
+  .term-input .pr.ctr{color:var(--term-cyan)}
+  .term-input input{flex:1;background:none;border:0;outline:none;color:#fff;font-family:var(--mono);font-size:13px}
+  .term-input input::placeholder{color:#3b4a5e}
+
+  /* success toast */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);
+    background:var(--green);color:#fff;padding:13px 22px;border-radius:12px;font-size:14.5px;font-weight:600;
+    box-shadow:0 10px 30px rgba(22,163,74,.35);transition:transform .35s cubic-bezier(.2,.8,.2,1);z-index:50;
+    display:flex;align-items:center;gap:10px}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+
+  .mobile-note{display:none}
+  @media(max-width:1180px){
+    .mobile-note{display:block;background:var(--amber-soft);border:1px solid #F0E2C8;color:#7a5312;
+      border-radius:10px;padding:12px 15px;font-size:13.5px;margin-bottom:16px}
+  }
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:20px}
+  .term-col ::-webkit-scrollbar-thumb{background:#1e2b3d}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+      <rect x="2" y="15" width="7" height="7" rx="1.2" fill="#38E1D6"/>
+      <rect x="10" y="15" width="7" height="7" rx="1.2" fill="#2496ED"/>
+      <rect x="18" y="15" width="7" height="7" rx="1.2" fill="#8ea2ff"/>
+      <rect x="6" y="7" width="7" height="7" rx="1.2" fill="#2496ED"/>
+      <rect x="14" y="7" width="7" height="7" rx="1.2" fill="#38E1D6"/>
+      <path d="M2 24 q13 5 26 0" stroke="#4257D6" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div><b>Container Lab</b><span>Learn Docker &amp; Kubernetes by doing</span></div>
+  </div>
+  <div class="tracks">
+    <button data-track="docker" class="active" onclick="setTrack('docker')"><span class="dot"></span>Docker</button>
+    <button data-track="k8s" onclick="setTrack('k8s')"><span class="dot"></span>Kubernetes</button>
+  </div>
+  <div class="progress-wrap">
+    <a id="docsLink" href="https://docs.docker.com/" target="_blank" rel="noopener"
+       style="color:#9FB3C8;font-size:12px;text-decoration:none;border:1px solid rgba(255,255,255,.14);padding:6px 11px;border-radius:8px;margin-right:4px">📖 Official docs ↗</a>
+    <div class="txt">Progress<br><b id="pctText">0%</b></div>
+    <div class="ring">
+      <svg width="40" height="40">
+        <circle cx="20" cy="20" r="16" stroke="#26415e" stroke-width="4" fill="none"/>
+        <circle id="ringFill" cx="20" cy="20" r="16" stroke="#38E1D6" stroke-width="4" fill="none"
+          stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="100.5"
+          style="transition:stroke-dashoffset .5s ease"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="side" id="side"></nav>
+  <main class="main" id="main"></main>
+  <section class="term-col">
+    <div class="term-head">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="ttl" id="termTitle">bash — container-lab</div>
+      <button class="reset" onclick="resetEnv()">↻ reset env</button>
+    </div>
+    <div class="term-body" id="termBody"></div>
+    <div class="term-input">
+      <span class="pr" id="prompt">$</span>
+      <input id="termInput" autocomplete="off" spellcheck="false" placeholder="type a command and press Enter…" />
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"><span>✓</span><span id="toastMsg">Lesson complete!</span></div>
+
+<script>
+/* ============================================================
+   STATE / SIMULATED ENVIRONMENT
+   ============================================================ */
+let state;
+function freshState(){
+  return {
+    inContainer:null,
+    dockerRunning:true,
+    containers:[],           // {id,name,image,status,ports,cmd}
+    images:['hello-world','nginx'],
+    disk:100,                // % free (for prune demo)
+    clusterUp:true,
+    nodes:[{name:'minikube',status:'Ready',roles:'control-plane',age:'12d',ver:'v1.29.2'}],
+    deployments:[],          // {name,image,replicas,hash,container}
+    pods:[],                 // {name,dep,image,status,restarts}
+    services:[],             // {name,type,clusterIP,port,nodePort,selector}
+    volumes:[],              // docker volumes
+    networks:[{name:'bridge',driver:'bridge'},{name:'host',driver:'host'},{name:'none',driver:'null'}],
+    compose:false,           // docker compose app running
+    namespaces:['default','kube-system'],
+    configmaps:[], secrets:[], hpas:[],
+    contexts:['minikube'], ctx:'minikube', cloud:null, // cloud: 'aws'|'azure'|'gcp'
+    helmReleases:[],
+    pvcs:[], statefulsets:[], daemonsets:[], jobs:[], cronjobs:[], ingresses:[],
+  };
+}
+const GOOD_BASES=['nginx','httpd','redis','busybox','node','python','mysql','postgres','alpine','hello-world','ubuntu'];
+const GOOD_TAGS=['latest','stable','alpine','1','1.25','1.27','16','20','3','3.12','7','8'];
+function imageOk(img){
+  let [base,tag]=img.split(':');
+  if(base==='myapp' && state.images.includes('myapp')) return true;
+  if(!GOOD_BASES.includes(base)) return false;
+  if(tag && !GOOD_TAGS.includes(tag)) return false; // typo tag => pull fails
+  return true;
+}
+const NAMES=['brave_wozniak','vibrant_turing','eager_lovelace','keen_hopper','jolly_kepler','wise_bardeen'];
+let nameI=0;
+function ctrName(){ return NAMES[(nameI++)%NAMES.length]; }
+function id6(){ return Math.random().toString(16).slice(2,8); }
+function rnd(n){ let s='';const c='abcdefghijklmnopqrstuvwxyz0123456789';for(let i=0;i<n;i++)s+=c[Math.floor(Math.random()*c.length)];return s; }
+
+/* ============================================================
+   OUTPUT HELPERS  (each line: {t,c})
+   ============================================================ */
+const L=(t,c='l-info')=>({t,c});
+function table(headers,rows){
+  const cols=headers.length;
+  const w=headers.map((h,i)=>Math.max(h.length,...rows.map(r=>String(r[i]||'').length)));
+  const fmt=r=>r.map((c,i)=>String(c||'').padEnd(w[i]+3)).join('');
+  const out=[L(fmt(headers),'l-head')];
+  rows.forEach(r=>out.push(L(fmt(r))));
+  return out;
+}
+
+/* ============================================================
+   DOCKER COMMANDS
+   ============================================================ */
+function docker(args){
+  if(!state.dockerRunning) return [L("Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",'l-err')];
+  const sub=args[0];
+  if(['--version','-v','version'].includes(sub))
+    return [L("Docker version 25.0.3, build 4debf41",'l-info')];
+  if(sub==='run') return dockerRun(args.slice(1));
+  if(sub==='ps') return dockerPs(args.includes('-a')||args.includes('--all'));
+  if(sub==='images') return dockerImages();
+  if(sub==='pull') return dockerPull(args[1]);
+  if(sub==='logs') return dockerLogs(args.filter(a=>!a.startsWith('-')).pop());
+  if(sub==='exec') return dockerExec(args.slice(1));
+  if(sub==='stop'||sub==='start'||sub==='restart') return dockerStop(sub,args[1]);
+  if(sub==='rm') return dockerRm(args.filter(a=>!a.startsWith('-')).slice(1));
+  if(sub==='rmi') return dockerRmi(args[1]);
+  if(sub==='build') return dockerBuild(args.slice(1));
+  if(sub==='login') return [L("Login Succeeded",'l-ok'),L("(you're now authenticated to "+(args[1]||"docker.io")+" — you can push images)",'l-dim')];
+  if(sub==='tag'){ if(args[2]) state.images.push(args[2].split(':')[0]); return [L("✓ Tagged "+withTag(args[1]||'?')+" as "+withTag(args[2]||'?'),'l-ok')]; }
+  if(sub==='push') return dockerPush(args[1]);
+  if(sub==='volume') return dockerVolume(args.slice(1));
+  if(sub==='network') return dockerNetwork(args.slice(1));
+  if(sub==='inspect') return dockerInspect(args[1]);
+  if(sub==='stats') return dockerStats();
+  if(sub==='compose') return dockerCompose(args.slice(1));
+  if(sub==='system'&&args[1]==='df') return dockerDf();
+  if(sub==='system'&&args[1]==='prune'){ state.disk=100; state.containers=state.containers.filter(c=>c.status==='Up');
+    return [L("Deleted stopped containers and dangling images.",'l-ok'),L("Total reclaimed space: 2.4GB",'l-info')]; }
+  if(sub===undefined||sub==='help'||sub==='--help')
+    return [L("Usage: docker COMMAND",'l-head'),L("Common: run, ps, images, pull, build, login, push, tag, volume, network, compose, inspect, stats",'l-dim')];
+  return [L("docker: '"+sub+"' is not a docker command. See 'docker --help'.",'l-err')];
+}
+function parseRun(a){
+  const o={detached:false,ports:[],name:null,image:null,cmd:null,interactive:false,env:[],restart:null,network:null,vols:[]};
+  for(let i=0;i<a.length;i++){
+    const x=a[i];
+    if(x==='-d'||x==='--detach') o.detached=true;
+    else if(x==='-it'||x==='-i'||x==='-t'||x==='-ti') o.interactive=true;
+    else if(x==='-p'||x==='--publish'){ o.ports.push(a[++i]); }
+    else if(x==='--name'){ o.name=a[++i]; }
+    else if(x==='-e'||x==='--env'){ o.env.push(a[++i]); }
+    else if(x==='--restart'){ o.restart=a[++i]; }
+    else if(x==='--network'||x==='--net'){ o.network=a[++i]; }
+    else if(x==='-v'||x==='--volume'){ o.vols.push(a[++i]); }
+    else if(x==='--rm'){}
+    else if(!x.startsWith('-')&&!o.image){ o.image=x; }
+    else if(o.image && !x.startsWith('-')){ o.cmd=(o.cmd||'')+' '+x; }
+  }
+  return o;
+}
+function dockerRun(a){
+  const o=parseRun(a);
+  if(!o.image) return [L("docker: 'run' requires at least 1 argument. An image name is needed.",'l-err')];
+  if(o.image==='hello-world'){
+    return [
+      L("Unable to find image 'hello-world:latest' locally",'l-dim'),
+      L("latest: Pulling from library/hello-world",'l-dim'),
+      L("Status: Downloaded newer image for hello-world:latest",'l-dim'),
+      L(""),L("Hello from Docker!",'l-ok'),
+      L("This message shows that your installation appears to be working correctly.",'l-info'),
+      L("The container printed this message and then exited — that's expected.",'l-dim'),
+    ];
+  }
+  if(!imageOk(o.image))
+    return [
+      L("Unable to find image '"+withTag(o.image)+"' locally",'l-dim'),
+      L("docker: Error response from daemon: pull access denied for "+o.image.split(':')[0]+
+        ", repository does not exist or may require 'docker login'.",'l-err'),
+      L("Tip: check the image name/tag for a typo, or run 'docker login'.",'l-warn'),
+    ];
+  // port conflict?
+  for(const p of o.ports){
+    const host=p.split(':')[0];
+    const clash=state.containers.find(c=>c.status==='Up'&&c.ports.some(pp=>pp.split(':')[0]===host));
+    if(clash) return [
+      L("docker: Error response from daemon: driver failed programming external connectivity:",'l-err'),
+      L("Bind for 0.0.0.0:"+host+" failed: port is already allocated.",'l-err'),
+      L("Tip: that host port is taken by '"+clash.name+"'. Use a different one, e.g. -p "+(parseInt(host)+1)+":80",'l-warn'),
+    ];
+  }
+  if(!state.images.includes(o.image.split(':')[0])) state.images.push(o.image.split(':')[0]);
+  // auto-create referenced volume if missing
+  o.vols.forEach(v=>{ const vn=v.split(':')[0]; if(vn && !vn.startsWith('/') && !vn.startsWith('.') && !state.volumes.includes(vn)) state.volumes.push(vn); });
+  const name=o.name||ctrName();
+  const c={id:id6(),name,image:o.image,status:'Up',ports:o.ports,cmd:o.cmd||defCmd(o.image),
+    env:o.env,restart:o.restart,network:o.network||'bridge',vols:o.vols};
+  state.containers.push(c);
+  const out=[];
+  if(o.detached){ out.push(L(c.id+id6()+id6().slice(0,8),'l-info')); }
+  else out.push(L("("+o.image+" is now running in the foreground — normally you'd add -d to detach)",'l-dim'));
+  const pmap=o.ports.length?" on http://localhost:"+o.ports[0].split(':')[0]:"";
+  out.push(L("✓ Container '"+name+"' started"+pmap,'l-ok'));
+  if(o.env.length) out.push(L("  env set: "+o.env.join(', '),'l-dim'));
+  if(o.restart) out.push(L("  restart policy: "+o.restart+" (Docker will keep it running if it crashes)",'l-dim'));
+  if(o.network&&o.network!=='bridge') out.push(L("  network: "+o.network,'l-dim'));
+  if(o.vols.length) out.push(L("  volume(s): "+o.vols.join(', ')+"  (data will survive container removal)",'l-dim'));
+  return out;
+}
+function withTag(img){ return img.includes(':')?img:img+':latest'; }
+function defCmd(img){ const b=img.split(':')[0]; return b==='nginx'?'nginx -g daemon off;':b==='redis'?'redis-server':'/bin/sh'; }
+function dockerPs(all){
+  const list=all?state.containers:state.containers.filter(c=>c.status==='Up');
+  if(!list.length) return [L("(no containers"+(all?"":" running — try 'docker ps -a' to see stopped ones")+")",'l-dim')];
+  return table(['CONTAINER ID','IMAGE','STATUS','PORTS','NAMES'],
+    list.map(c=>[c.id,c.image,c.status==='Up'?'Up 3 seconds':'Exited (0) 1 min ago',
+      c.ports.map(p=>'0.0.0.0:'+p.split(':')[0]+'->'+p.split(':')[1]+'/tcp').join(', '),c.name]));
+}
+function dockerImages(){
+  const seen=[...new Set(state.images)];
+  return table(['REPOSITORY','TAG','IMAGE ID','SIZE'],
+    seen.map(i=>[i,'latest',id6()+id6().slice(0,6),i==='nginx'?'187MB':i==='myapp'?'52MB':'13.3kB']));
+}
+function dockerPull(img){
+  if(!img) return [L("docker pull requires an image name",'l-err')];
+  if(!imageOk(img)) return [L("Error: manifest for "+withTag(img)+" not found: name/tag unknown.",'l-err')];
+  if(!state.images.includes(img.split(':')[0])) state.images.push(img.split(':')[0]);
+  return [L("Using default tag: latest",'l-dim'),L("latest: Pulling from library/"+img.split(':')[0],'l-dim'),
+    L("Status: Downloaded newer image for "+withTag(img),'l-ok')];
+}
+function findCtr(ref){ return state.containers.find(c=>c.name===ref||c.id.startsWith(ref)); }
+function dockerLogs(ref){
+  if(!ref) return [L("'docker logs' requires a container name or ID. Get it from 'docker ps'.",'l-err')];
+  const c=findCtr(ref);
+  if(!c) return [L("Error: No such container: "+ref,'l-err')];
+  if(c.image.startsWith('nginx')) return [
+    L('/docker-entrypoint.sh: Configuration complete; ready for start up','l-dim'),
+    L('172.17.0.1 - - "GET / HTTP/1.1" 200 615 "-" "curl/8.4.0"','l-info'),
+    L('172.17.0.1 - - "GET /health HTTP/1.1" 200 2 "-" "kube-probe/1.29"','l-info'),
+  ];
+  return [L('(no logs yet for '+c.name+')','l-dim')];
+}
+function dockerExec(a){
+  const it=a.includes('-it')||a.includes('-i');
+  const rest=a.filter(x=>!x.startsWith('-'));
+  const c=findCtr(rest[0]);
+  if(!c) return [L("Error: No such container: "+(rest[0]||''),'l-err')];
+  if(c.status!=='Up') return [L("Error: Container "+c.name+" is not running. Start it first with 'docker start "+c.name+"'.",'l-err')];
+  const shell=rest[1]||'sh';
+  if(shell==='sh'||shell==='bash'){
+    state.inContainer=c;
+    return [L("You're now inside container '"+c.name+"' (simulated).",'l-ok'),
+      L("Try: ls, cat /etc/hostname, whoami — then type 'exit' to leave.",'l-dim')];
+  }
+  return [L("(ran '"+rest.slice(1).join(' ')+"' in "+c.name+")",'l-dim')];
+}
+function insideShell(cmd){
+  const c=state.inContainer;
+  if(cmd==='exit'){ state.inContainer=null; return [L("exit — back on your host machine.",'l-dim')]; }
+  if(cmd==='ls'||cmd==='ls -l') return [L("bin   dev   etc   usr   var   docker-entrypoint.sh",'l-info')];
+  if(cmd.startsWith('cat /etc/hostname')) return [L(c.id,'l-info')];
+  if(cmd==='whoami') return [L("root",'l-info')];
+  if(cmd==='pwd') return [L("/",'l-info')];
+  if(cmd==='hostname') return [L(c.id,'l-info')];
+  if(cmd==='') return [];
+  return [L("sh: "+cmd.split(' ')[0]+": not found",'l-err'),L("(inside the container — try ls, whoami, hostname, or 'exit')",'l-dim')];
+}
+function dockerStop(kind,ref){
+  const c=findCtr(ref);
+  if(!c) return [L("Error: No such container: "+(ref||''),'l-err')];
+  if(kind==='stop'){ c.status='Exited'; return [L(c.name,'l-info'),L("✓ Stopped '"+c.name+"'",'l-ok')]; }
+  c.status='Up'; return [L(c.name,'l-info'),L("✓ Started '"+c.name+"'",'l-ok')];
+}
+function dockerRm(refs){
+  if(!refs.length) return [L("'docker rm' requires a container name/ID",'l-err')];
+  const out=[];
+  refs.forEach(r=>{
+    const c=findCtr(r); if(!c){ out.push(L("Error: No such container: "+r,'l-err')); return; }
+    if(c.status==='Up'){ out.push(L("Error: cannot remove running container "+c.name+" — stop it first (docker stop "+c.name+"), or use 'docker rm -f'.",'l-err')); return; }
+    state.containers=state.containers.filter(x=>x!==c); out.push(L(c.name,'l-info'));
+  });
+  return out;
+}
+function dockerRmi(img){
+  if(!img) return [L("'docker rmi' requires an image",'l-err')];
+  state.images=state.images.filter(i=>i!==img.split(':')[0]);
+  return [L("Untagged: "+withTag(img),'l-ok')];
+}
+function dockerBuild(a){
+  const ti=a.indexOf('-t'); const name=ti>=0?a[ti+1]:'mybuild';
+  state.images.push(name.split(':')[0]);
+  return [
+    L("[+] Building 4.2s (8/8) FINISHED",'l-dim'),
+    L(" => [1/3] FROM docker.io/library/node:20-alpine",'l-dim'),
+    L(" => [2/3] COPY . .",'l-dim'),
+    L(" => [3/3] RUN npm install",'l-dim'),
+    L(" => exporting to image",'l-dim'),
+    L("✓ Successfully tagged "+name+":latest",'l-ok'),
+    L("Run it with:  docker run -d -p 3000:3000 "+name,'l-info'),
+  ];
+}
+function dockerPush(img){
+  if(!img) return [L("'docker push' needs an image, e.g. docker push youruser/myapp:1.0",'l-err')];
+  if(!img.includes('/')) return [L("The push refers to repository [docker.io/library/"+img.split(':')[0]+"]",'l-dim'),
+    L("denied: requested access to the resource is denied",'l-err'),
+    L("Tip: tag it with your username first — docker tag "+img+" YOURNAME/"+img+" — then push that.",'l-warn')];
+  return [L("The push refers to repository ["+img.split(':')[0]+"]",'l-dim'),
+    L("5f70bf18a086: Pushed",'l-dim'),L("a1b2c3d4e5f6: Pushed",'l-dim'),
+    L("✓ "+withTag(img)+" pushed to the registry — now anyone (with access) can pull it.",'l-ok')];
+}
+function dockerVolume(a){
+  const op=a[0];
+  if(op==='create'){ const n=a[1]||('vol_'+rnd(4)); if(!state.volumes.includes(n))state.volumes.push(n); return [L(n,'l-info'),L("✓ Volume '"+n+"' created — a safe place for data that outlives containers.",'l-ok')]; }
+  if(op==='ls') return state.volumes.length?table(['DRIVER','VOLUME NAME'],state.volumes.map(v=>['local',v])):[L("(no volumes yet — create one with 'docker volume create data')",'l-dim')];
+  if(op==='rm'){ state.volumes=state.volumes.filter(v=>v!==a[1]); return [L(a[1]||'',(a[1]?'l-info':'l-err'))]; }
+  if(op==='inspect'){ if(!state.volumes.includes(a[1]))return [L("Error: no such volume: "+(a[1]||''),'l-err')];
+    return [L('[ { "Name": "'+a[1]+'", "Driver": "local", "Mountpoint": "/var/lib/docker/volumes/'+a[1]+'/_data" } ]','l-info')]; }
+  return [L("usage: docker volume [create|ls|rm|inspect]",'l-err')];
+}
+function dockerNetwork(a){
+  const op=a[0];
+  if(op==='create'){ const n=a[1]||('net_'+rnd(4)); if(!state.networks.find(x=>x.name===n))state.networks.push({name:n,driver:'bridge'});
+    return [L(id6()+id6(),'l-info'),L("✓ Network '"+n+"' created — containers on it can reach each other by name.",'l-ok')]; }
+  if(op==='ls') return table(['NETWORK ID','NAME','DRIVER','SCOPE'],state.networks.map(n=>[id6(),n.name,n.driver,'local']));
+  if(op==='rm'){ state.networks=state.networks.filter(n=>n.name!==a[1]); return [L(a[1]||'',(a[1]?'l-info':'l-err'))]; }
+  if(op==='connect'){ return [L("✓ Connected container '"+(a[2]||'?')+"' to network '"+(a[1]||'?')+"'.",'l-ok')]; }
+  if(op==='inspect'){ return [L('[ { "Name": "'+(a[1]||'?')+'", "Driver": "bridge", "Containers": {...} } ]','l-info')]; }
+  return [L("usage: docker network [create|ls|rm|connect|inspect]",'l-err')];
+}
+function dockerInspect(ref){
+  const c=findCtr(ref); if(!c) return [L("Error: No such object: "+(ref||''),'l-err')];
+  return [L('[ {','l-info'),L('  "Id": "'+c.id+'...",','l-info'),L('  "Name": "/'+c.name+'",','l-info'),
+    L('  "State": { "Status": "'+(c.status==='Up'?'running':'exited')+'", "Restarting": false },','l-info'),
+    L('  "Config": { "Image": "'+c.image+'", "Env": '+JSON.stringify(c.env||[])+' },','l-info'),
+    L('  "NetworkSettings": { "Networks": { "'+(c.network||'bridge')+'": {...} } }','l-info'),L('} ]','l-info'),
+    L("(docker inspect prints the full config/state as JSON — great for debugging.)",'l-dim')];
+}
+function dockerStats(){
+  const up=state.containers.filter(c=>c.status==='Up');
+  if(!up.length) return [L("(no running containers to show stats for)",'l-dim')];
+  return table(['CONTAINER','NAME','CPU %','MEM USAGE / LIMIT','MEM %'],
+    up.map(c=>[c.id,c.name,(Math.random()*3).toFixed(2)+'%',(20+Math.floor(Math.random()*40))+'MiB / 512MiB',(Math.random()*8).toFixed(2)+'%']));
+}
+function dockerDf(){
+  return table(['TYPE','TOTAL','ACTIVE','SIZE','RECLAIMABLE'],
+    [['Images',String(state.images.length),String(state.containers.length),'420MB','120MB (28%)'],
+     ['Containers',String(state.containers.length),String(state.containers.filter(c=>c.status==='Up').length),'16MB','8MB'],
+     ['Local Volumes',String(state.volumes.length),'0','40MB','40MB (100%)']]);
+}
+function dockerCompose(a){
+  const op=a[0];
+  if(op==='up'){ state.compose=true;
+    ['web','db'].forEach((s,i)=>{ if(!state.containers.find(c=>c.name==='myapp-'+s))
+      state.containers.push({id:id6(),name:'myapp-'+s,image:s==='web'?'nginx':'postgres:16',status:'Up',
+        ports:s==='web'?['8080:80']:[],cmd:defCmd(s==='web'?'nginx':'postgres'),env:[],network:'myapp_default',vols:[]}); });
+    if(!state.networks.find(n=>n.name==='myapp_default')) state.networks.push({name:'myapp_default',driver:'bridge'});
+    return [L("[+] Running 3/3",'l-dim'),L(" ✔ Network myapp_default   Created",'l-ok'),
+      L(" ✔ Container myapp-db      Started",'l-ok'),L(" ✔ Container myapp-web     Started",'l-ok'),
+      L("✓ Your multi-container app is up. 'web' can reach 'db' by name. Try 'docker compose ps'.",'l-ok')]; }
+  if(op==='ps'){ const cs=state.containers.filter(c=>c.name.startsWith('myapp-'));
+    return cs.length?table(['NAME','IMAGE','STATUS','PORTS'],cs.map(c=>[c.name,c.image,'Up',c.ports.join(',')])):
+      [L("(nothing running — start it with 'docker compose up -d')",'l-dim')]; }
+  if(op==='down'){ state.containers=state.containers.filter(c=>!c.name.startsWith('myapp-')); state.compose=false;
+    return [L(" ✔ Container myapp-web  Removed",'l-ok'),L(" ✔ Container myapp-db   Removed",'l-ok'),L(" ✔ Network myapp_default Removed",'l-ok')]; }
+  if(op==='logs') return [L("myapp-web  | 172.20.0.1 - GET / 200",'l-info'),L("myapp-db   | database system is ready to accept connections",'l-info')];
+  return [L("usage: docker compose [up|ps|down|logs]",'l-err')];
+}
+
+/* ============================================================
+   KUBERNETES COMMANDS
+   ============================================================ */
+function reconcile(dep){
+  let mine=state.pods.filter(p=>p.dep===dep.name);
+  // remove extras
+  while(mine.length>dep.replicas){ const p=mine.pop(); state.pods=state.pods.filter(x=>x!==p); }
+  // add missing
+  while(mine.length<dep.replicas){
+    const st=imageOk(dep.image)?'Running':'ImagePullBackOff';
+    const p={name:dep.name+'-'+dep.hash+'-'+rnd(5),dep:dep.name,image:dep.image,status:st,restarts:st==='Running'?0:0};
+    state.pods.push(p); mine.push(p);
+  }
+  // update status of existing to match image validity
+  mine.forEach(p=>{ p.image=dep.image; p.status=imageOk(dep.image)?'Running':'ImagePullBackOff'; });
+}
+function kubectl(args){
+  if(!state.clusterUp) return [L("The connection to the server 127.0.0.1:8443 was refused - did you specify the right host or port?",'l-err'),
+    L("Tip: is your cluster running? Try 'minikube start'.",'l-warn')];
+  const v=args[0];
+  if(v==='version') return [L("Client Version: v1.29.2",'l-info'),L("Server Version: v1.29.2",'l-info')];
+  if(v==='cluster-info') return [L("Kubernetes control plane is running at https://127.0.0.1:8443",'l-ok'),
+    L("CoreDNS is running at https://127.0.0.1:8443/api/v1/.../coredns",'l-dim')];
+  if(v==='get') return kGet(args.slice(1));
+  if(v==='create'&&args[1]==='deployment') return kCreate(args.slice(2));
+  if(v==='create'&&(args[1]==='namespace'||args[1]==='ns')) return kCreateNs(args[2]);
+  if(v==='create'&&args[1]==='configmap') return kCreateCM(args.slice(2));
+  if(v==='create'&&args[1]==='secret') return kCreateSecret(args.slice(2));
+  if(v==='run') return kRun(args.slice(1));
+  if(v==='expose'&&(args[1]==='deployment'||args[1]==='deploy')) return kExpose(args.slice(2));
+  if(v==='scale') return kScale(args.slice(1));
+  if(v==='autoscale') return kAutoscale(args.slice(1));
+  if(v==='delete') return kDelete(args.slice(1));
+  if(v==='describe') return kDescribe(args.slice(1));
+  if(v==='logs') return kLogs(args.slice(1));
+  if(v==='exec') return kExec(args.slice(1));
+  if(v==='port-forward') return [L("Forwarding from 127.0.0.1:8080 -> 80",'l-ok'),L("Forwarding from [::1]:8080 -> 80",'l-dim'),L("(now open http://localhost:8080 — port-forward tunnels straight to the pod. Ctrl-C to stop.)",'l-dim')];
+  if(v==='top') return kTop(args.slice(1));
+  if(v==='label'||v==='annotate') return [L((args[1]||'resource')+"/"+(args[2]||'?')+" labeled",'l-ok')];
+  if(v==='edit') return [L("(this would open the resource's YAML in your editor; save to apply changes)",'l-dim'),L("Tip: for scripted changes use 'kubectl set ...' or 'kubectl apply -f'.",'l-dim')];
+  if(v==='config') return kConfig(args.slice(1));
+  if(v==='set'&&args[1]==='image') return kSetImage(args.slice(2));
+  if(v==='apply') return kApply(args.slice(1));
+  if(v==='rollout') return kRollout(args.slice(1));
+  if(v===undefined||v==='--help'||v==='help')
+    return [L("kubectl controls the Kubernetes cluster manager.",'l-head'),
+      L("Common: get, create, run, expose, scale, autoscale, delete, describe, logs, exec, apply, rollout, config, top",'l-dim')];
+  return [L("error: unknown command \""+v+"\" for \"kubectl\"",'l-err')];
+}
+function argVal(args,flag){ const i=args.findIndex(a=>a===flag||a.startsWith(flag+'=')); if(i<0)return null;
+  const a=args[i]; if(a.includes('='))return a.split('=').slice(1).join('='); return args[i+1]; }
+function kCreate(a){
+  const name=a.find(x=>!x.startsWith('-'));
+  const image=argVal(a,'--image');
+  if(!name||!image) return [L("error: --image is required. e.g. kubectl create deployment nginx --image=nginx",'l-err')];
+  if(state.deployments.find(d=>d.name===name)) return [L('Error from server (AlreadyExists): deployments.apps "'+name+'" already exists','l-err')];
+  const dep={name,image,replicas:1,hash:rnd(4),container:name};
+  state.deployments.push(dep); reconcile(dep);
+  const out=[L('deployment.apps/'+name+' created','l-ok')];
+  if(!imageOk(image)) out.push(L("⚠ Heads up: check 'kubectl get pods' — that image may not pull.",'l-warn'));
+  return out;
+}
+function lbExternal(s){
+  if(s.type!=='LoadBalancer') return s.type==='NodePort'?'<none>':'<none>';
+  if(state.cloud==='aws') return 'a'+rnd(4)+'.elb.amazonaws.com';
+  if(state.cloud==='azure') return '20.55.'+Math.floor(Math.random()*250)+'.'+Math.floor(Math.random()*250);
+  if(state.cloud==='gcp') return '34.120.'+Math.floor(Math.random()*250)+'.'+Math.floor(Math.random()*250);
+  return '<pending>';
+}
+function kGet(a){
+  const kind=(a[0]||'').replace(/s$/,'');
+  const li=a.findIndex(x=>x==='-l'||x==='--selector');
+  const sel=li>=0?(a[li+1]||'').split('=')[1]:null;
+  const allNs=a.includes('-A')||a.includes('--all-namespaces');
+  if(['node','no'].includes(kind)) return table(['NAME','STATUS','ROLES','AGE','VERSION'],
+    state.nodes.map(n=>[n.name,n.status,n.roles,n.age,n.ver]));
+  if(['pod','po'].includes(kind)){
+    let pods=sel?state.pods.filter(p=>p.dep===sel):state.pods;
+    if(!pods.length) return [L("No resources found"+(sel?" matching app="+sel:"")+" in default namespace.",'l-dim')];
+    if(allNs) return table(['NAMESPACE','NAME','READY','STATUS','RESTARTS','AGE'],
+      [['kube-system','coredns-'+rnd(5),'1/1','Running','0','20d'],
+       ...pods.map(p=>['default',p.name,p.status==='Running'?'1/1':'0/1',p.status,p.restarts,'30s'])]);
+    return table(['NAME','READY','STATUS','RESTARTS','AGE'],
+      pods.map(p=>[p.name,p.status==='Running'?'1/1':'0/1',p.status,p.restarts,'30s']));
+  }
+  if(['deployment','deploy'].includes(kind)){
+    if(!state.deployments.length) return [L("No resources found in default namespace.",'l-dim')];
+    return table(['NAME','READY','UP-TO-DATE','AVAILABLE','AGE'],
+      state.deployments.map(d=>{const r=state.pods.filter(p=>p.dep===d.name&&p.status==='Running').length;
+        return [d.name,r+'/'+d.replicas,d.replicas,r,'2m'];}));
+  }
+  if(['replicaset','rs'].includes(kind)){
+    if(!state.deployments.length) return [L("No resources found.",'l-dim')];
+    return table(['NAME','DESIRED','CURRENT','READY','AGE'],
+      state.deployments.map(d=>[d.name+'-'+d.hash,d.replicas,d.replicas,state.pods.filter(p=>p.dep===d.name&&p.status==='Running').length,'2m']));
+  }
+  if(['service','svc'].includes(kind)){
+    return table(['NAME','TYPE','CLUSTER-IP','EXTERNAL-IP','PORT(S)','AGE'],
+      [['kubernetes','ClusterIP','10.96.0.1','<none>','443/TCP','20d'],
+       ...state.services.map(s=>[s.name,s.type,s.clusterIP,lbExternal(s),
+         s.port+(s.nodePort?':'+s.nodePort:'')+'/TCP','1m'])]);
+  }
+  if(['configmap','cm'].includes(kind)) return state.configmaps.length?
+    table(['NAME','DATA','AGE'],state.configmaps.map(c=>[c.name,String(Object.keys(c.data).length),'1m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(kind==='secret') return state.secrets.length?
+    table(['NAME','TYPE','DATA','AGE'],state.secrets.map(s=>[s.name,'Opaque',String(Object.keys(s.data).length),'1m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(kind==='hpa'||kind==='horizontalpodautoscaler') return state.hpas.length?
+    table(['NAME','REFERENCE','TARGETS','MINPODS','MAXPODS','REPLICAS'],state.hpas.map(h=>[h.name,'Deployment/'+h.dep,'12%/'+h.cpu+'%',h.min,h.max,String(state.deployments.find(d=>d.name===h.dep)?.replicas||h.min)])):[L("No resources found in default namespace.",'l-dim')];
+  if(['namespace','ns'].includes(kind)) return table(['NAME','STATUS','AGE'],state.namespaces.map(n=>[n,'Active','20d']));
+  if(kind==='pv') return [L("No resources found. (cluster-wide PersistentVolumes appear here once provisioned)",'l-dim')];
+  if(kind==='pvc'||kind==='persistentvolumeclaim') return state.pvcs.length?table(['NAME','STATUS','VOLUME','CAPACITY','STORAGECLASS'],state.pvcs.map(p=>[p,'Bound','pvc-'+rnd(6),'1Gi','standard'])):[L("No resources found in default namespace.",'l-dim')];
+  if(['storageclass','sc'].includes(kind)) return table(['NAME','PROVISIONER','AGE'],[['standard (default)','k8s.io/minikube-hostpath','20d']]);
+  if(['statefulset','sts'].includes(kind)) return state.statefulsets.length?table(['NAME','READY','AGE'],state.statefulsets.map(s=>[s,'3/3','1m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(['daemonset','ds'].includes(kind)) return state.daemonsets.length?table(['NAME','DESIRED','READY','AGE'],state.daemonsets.map(s=>[s,'1','1','1m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(kind==='job') return state.jobs.length?table(['NAME','COMPLETIONS','AGE'],state.jobs.map(j=>[j,'1/1','1m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(kind==='cronjob'||kind==='cj') return state.cronjobs.length?table(['NAME','SCHEDULE','LAST SCHEDULE','AGE'],state.cronjobs.map(c=>[c,'*/5 * * * *','2m','5m'])):[L("No resources found in default namespace.",'l-dim')];
+  if(['ingress','ing'].includes(kind)) return state.ingresses.length?table(['NAME','CLASS','HOSTS','ADDRESS','PORTS'],state.ingresses.map(i=>[i,'nginx','myapp.example.com',state.cloud?'a'+rnd(3)+'.elb.amazonaws.com':'<pending>','80'])):[L("No resources found in default namespace.",'l-dim')];
+  if(kind==='all'){
+    return [L("(pods, deployments and services)",'l-dim'),
+      ...kGet(['pods']),L(""),...kGet(['deployments']),L(""),...kGet(['svc'])];
+  }
+  if(kind==='event') return [L("LAST SEEN   TYPE     REASON      OBJECT        MESSAGE",'l-head'),L("30s         Normal   Scheduled   pod/…         Successfully assigned pod to minikube",'l-dim')];
+  return [L("error: the server doesn't have a resource type \""+a[0]+"\"",'l-err')];
+}
+function kExpose(a){
+  const name=a.find(x=>!x.startsWith('-')&&x!=='deployment'&&x!=='deploy');
+  const dep=state.deployments.find(d=>d.name===name);
+  if(!dep) return [L('Error from server (NotFound): deployments.apps "'+name+'" not found','l-err')];
+  const type=argVal(a,'--type')||'ClusterIP';
+  const port=argVal(a,'--port')||'80';
+  const svc={name:dep.name,type,clusterIP:'10.96.'+Math.floor(Math.random()*250)+'.'+Math.floor(Math.random()*250),
+    port,nodePort:type==='NodePort'?30000+Math.floor(Math.random()*2767):null,selector:'app='+dep.name};
+  state.services=state.services.filter(s=>s.name!==svc.name); state.services.push(svc);
+  const out=[L('service/'+dep.name+' exposed','l-ok')];
+  if(type==='NodePort') out.push(L("Reach it at:  http://<node-ip>:"+svc.nodePort+"   (on minikube: 'minikube service "+dep.name+"')",'l-info'));
+  if(type==='LoadBalancer'){
+    if(state.cloud) out.push(L("☁ The cloud provisioned a real load balancer. Check 'kubectl get svc' for the EXTERNAL-IP.",'l-ok'));
+    else out.push(L("On a self-managed/on-prem cluster, EXTERNAL-IP stays <pending> — there's no cloud load balancer to hand one out.",'l-warn'));
+  }
+  return out;
+}
+function kScale(a){
+  let name=null;
+  const slash=a.find(x=>x.includes('/'));
+  if(slash) name=slash.split('/').pop();
+  else { const ti=a.findIndex(x=>/^deploy(ment)?s?$/.test(x));
+    name = ti>=0 ? a[ti+1] : a.find(x=>!x.startsWith('-')); }
+  const rep=parseInt(argVal(a,'--replicas'));
+  const dep=state.deployments.find(d=>d.name===name);
+  if(!dep) return [L('Error from server (NotFound): deployments.apps "'+name+'" not found','l-err')];
+  if(isNaN(rep)) return [L("error: --replicas is required, e.g. --replicas=3",'l-err')];
+  dep.replicas=rep; reconcile(dep);
+  return [L('deployment.apps/'+name+' scaled','l-ok'),L("Now running "+rep+" copy(ies). Check 'kubectl get pods'.",'l-dim')];
+}
+function kDelete(a){
+  const kind=a[0]; const name=a[1];
+  if(['pod','po'].includes(kind.replace(/s$/,''))){
+    const p=state.pods.find(x=>x.name===name);
+    if(!p) return [L('Error from server (NotFound): pods "'+name+'" not found','l-err')];
+    const dep=state.deployments.find(d=>d.name===p.dep);
+    state.pods=state.pods.filter(x=>x!==p);
+    const out=[L('pod "'+name+'" deleted','l-ok')];
+    if(dep){ reconcile(dep); out.push(L("✨ Self-healing: the Deployment noticed a pod is missing and created a new one!",'l-ok'));
+      out.push(L("Run 'kubectl get pods' — you'll still have "+dep.replicas+". That's Kubernetes keeping your desired state.",'l-dim')); }
+    return out;
+  }
+  if(['deployment','deploy'].includes(kind.replace(/s$/,''))){
+    const d=state.deployments.find(x=>x.name===name);
+    if(!d) return [L('Error from server (NotFound): deployments.apps "'+name+'" not found','l-err')];
+    state.deployments=state.deployments.filter(x=>x!==d);
+    state.pods=state.pods.filter(p=>p.dep!==name);
+    return [L('deployment.apps "'+name+'" deleted','l-ok')];
+  }
+  if(['service','svc'].includes(kind.replace(/s$/,''))){
+    state.services=state.services.filter(s=>s.name!==name);
+    return [L('service "'+name+'" deleted','l-ok')];
+  }
+  return [L("error: unknown resource '"+kind+"'",'l-err')];
+}
+function kDescribe(a){
+  const kind=(a[0]||'').replace(/s$/,''); const name=a[1];
+  if(['pod','po'].includes(kind)){
+    const p=state.pods.find(x=>x.name===name)||state.pods.find(x=>x.name.startsWith(name||'###'));
+    if(!p) return [L('Error from server (NotFound): pods "'+name+'" not found. Copy an exact name from \'kubectl get pods\'.',
+      'l-err')];
+    const out=[L('Name:      '+p.name,'l-info'),L('Status:    '+p.status,p.status==='Running'?'l-ok':'l-err'),
+      L('Image:     '+p.image,'l-info'),L('Restarts:  '+p.restarts,'l-info'),L(''),L('Events:','l-head')];
+    if(p.status==='ImagePullBackOff'){
+      out.push(L('  Warning  Failed   kubelet  Failed to pull image "'+p.image+'": not found','l-err'));
+      out.push(L('  Warning  Failed   kubelet  Error: ErrImagePull','l-err'));
+      out.push(L('  Normal   BackOff  kubelet  Back-off pulling image "'+p.image+'"','l-warn'));
+      out.push(L("  → Fix: the image name/tag is wrong. Correct it with 'kubectl set image'.",'l-warn'));
+    } else if(p.status==='CrashLoopBackOff'){
+      out.push(L('  Warning  BackOff  kubelet  Back-off restarting failed container','l-err'));
+      out.push(L("  → Fix: check 'kubectl logs "+p.name+"' — the app is starting then crashing.",'l-warn'));
+    } else {
+      out.push(L('  Normal  Pulled    kubelet  Container image "'+p.image+'" already present','l-dim'));
+      out.push(L('  Normal  Started   kubelet  Started container','l-ok'));
+    }
+    return out;
+  }
+  if(['deployment','deploy'].includes(kind)){
+    const d=state.deployments.find(x=>x.name===name);
+    if(!d) return [L('Error from server (NotFound): deployments.apps "'+name+'" not found','l-err')];
+    return [L('Name:      '+d.name,'l-info'),L('Replicas:  '+d.replicas+' desired','l-info'),
+      L('Image:     '+d.image,'l-info'),L('Selector:  app='+d.name,'l-dim')];
+  }
+  return [L("Provide a resource, e.g. 'kubectl describe pod <name>'",'l-err')];
+}
+function kLogs(a){
+  const name=a.find(x=>!x.startsWith('-'));
+  const p=state.pods.find(x=>x.name===name)||state.pods.find(x=>x.name.startsWith(name||'###'));
+  if(!p) return [L('Error from server (NotFound): pods "'+(name||'')+'" not found','l-err')];
+  if(p.status==='ImagePullBackOff') return [L('Error from server (BadRequest): container is waiting to start: image can\'t be pulled','l-err'),
+    L("(no logs yet — the container never started. Fix the image first.)",'l-dim')];
+  if(p.status==='CrashLoopBackOff') return [L('Error: application failed to start: config value missing','l-err'),
+    L("(the app started, hit an error, and exited — that's the crash loop.)",'l-dim')];
+  return [L('/docker-entrypoint.sh: Configuration complete; ready for start up','l-dim'),
+    L('172.17.0.1 - - "GET / HTTP/1.1" 200 615','l-info')];
+}
+function kSetImage(a){
+  const t=a.find(x=>x.includes('/')); const dep=t?state.deployments.find(d=>d.name===t.split('/')[1]):null;
+  const pair=a.find(x=>x.includes('=')&&!x.startsWith('--'));
+  if(!dep||!pair) return [L("usage: kubectl set image deployment/<name> <container>=<newimage>",'l-err')];
+  dep.image=pair.split('=').slice(1).join('='); reconcile(dep);
+  const out=[L('deployment.apps/'+dep.name+' image updated','l-ok')];
+  if(imageOk(dep.image)) out.push(L("✓ Pods should recover now — check 'kubectl get pods'.",'l-ok'));
+  return out;
+}
+function kApply(a){
+  const f=a.includes('-f')?a[a.indexOf('-f')+1]:null;
+  if(f==='nginx-deploy.yaml'||f==='deployment.yaml'){
+    let dep=state.deployments.find(d=>d.name==='web');
+    if(!dep){ dep={name:'web',image:'nginx:1.25',replicas:3,hash:rnd(4),container:'nginx'}; state.deployments.push(dep); }
+    else { dep.image='nginx:1.25'; dep.replicas=3; }
+    reconcile(dep);
+    return [L('deployment.apps/web created','l-ok'),L("Applied: 3 replicas of nginx:1.25. Check 'kubectl get pods'.",'l-dim')];
+  }
+  if(f==='configmap.yaml'){ if(!state.configmaps.find(c=>c.name==='app-config'))state.configmaps.push({name:'app-config',data:{APP_MODE:'prod',LOG_LEVEL:'info'}}); return [L('configmap/app-config created','l-ok')]; }
+  if(f==='pvc.yaml'){ if(!state.pvcs.includes('data-pvc'))state.pvcs.push('data-pvc'); return [L('persistentvolumeclaim/data-pvc created','l-ok'),L("The StorageClass provisioned a 1Gi volume and Bound it. See 'kubectl get pvc'.",'l-dim')]; }
+  if(f==='statefulset.yaml'){ if(!state.statefulsets.includes('db'))state.statefulsets.push('db'); return [L('statefulset.apps/db created','l-ok'),L("StatefulSet gives each pod a stable name (db-0, db-1…) and its own storage.",'l-dim')]; }
+  if(f==='daemonset.yaml'){ if(!state.daemonsets.includes('log-agent'))state.daemonsets.push('log-agent'); return [L('daemonset.apps/log-agent created','l-ok'),L("A DaemonSet runs one copy on every node — great for logging/monitoring agents.",'l-dim')]; }
+  if(f==='cronjob.yaml'){ if(!state.cronjobs.includes('report'))state.cronjobs.push('report'); return [L('cronjob.batch/report created','l-ok'),L("It'll run on the schedule (here every 5 min). See 'kubectl get cronjob'.",'l-dim')]; }
+  if(f==='ingress.yaml'){ if(!state.ingresses.includes('web-ingress'))state.ingresses.push('web-ingress'); return [L('ingress.networking.k8s.io/web-ingress created','l-ok'),L("Ingress routes outside HTTP traffic by host/path to your Services (needs an ingress controller).",'l-dim')]; }
+  return [L("error: the path \""+(f||'?')+"\" does not exist",'l-err'),
+    L("Sample files in this lab: nginx-deploy.yaml, configmap.yaml, pvc.yaml, statefulset.yaml, daemonset.yaml, cronjob.yaml, ingress.yaml",'l-warn')];
+}
+function kRollout(a){
+  const t=a.find(x=>x.includes('/')); const name=t?t.split('/')[1]:null;
+  if(a[0]==='status') return [L('deployment "'+(name||'?')+'" successfully rolled out','l-ok')];
+  if(a[0]==='undo') return [L('deployment.apps/'+(name||'?')+' rolled back','l-ok'),L("Reverted to the previous version — zero downtime.",'l-dim')];
+  if(a[0]==='history') return [L('REVISION  CHANGE-CAUSE','l-head'),L('1         <none>'),L('2         <none>')];
+  return [L("usage: kubectl rollout [status|undo|history] deployment/<name>",'l-err')];
+}
+function kCreateNs(n){ if(!n)return [L("usage: kubectl create namespace <name>",'l-err')];
+  if(state.namespaces.includes(n))return [L('Error from server (AlreadyExists): namespaces "'+n+'" already exists','l-err')];
+  state.namespaces.push(n); return [L('namespace/'+n+' created','l-ok'),L("Namespaces split one cluster into isolated areas (e.g. dev / prod). Target one with -n "+n+".",'l-dim')]; }
+function kCreateCM(a){ const name=a.find(x=>!x.startsWith('-')); if(!name)return [L("usage: kubectl create configmap <name> --from-literal=KEY=value",'l-err')];
+  const data={}; a.filter(x=>x.startsWith('--from-literal=')).forEach(x=>{const kv=x.split('=');data[kv[1]]=kv.slice(2).join('=');});
+  state.configmaps=state.configmaps.filter(c=>c.name!==name); state.configmaps.push({name,data});
+  return [L('configmap/'+name+' created','l-ok'),L("A ConfigMap holds non-secret settings your pods can read as env vars or files.",'l-dim')]; }
+function kCreateSecret(a){ const name=a.find(x=>!x.startsWith('-')&&x!=='generic'&&x!=='tls'&&x!=='docker-registry');
+  if(!name)return [L("usage: kubectl create secret generic <name> --from-literal=KEY=value",'l-err')];
+  const data={}; a.filter(x=>x.startsWith('--from-literal=')).forEach(x=>{const kv=x.split('=');data[kv[1]]=kv.slice(2).join('=');});
+  state.secrets=state.secrets.filter(s=>s.name!==name); state.secrets.push({name,data});
+  return [L('secret/'+name+' created','l-ok'),L("Secrets are like ConfigMaps but for sensitive values (passwords, tokens) — base64-encoded and access-controlled.",'l-dim')]; }
+function kRun(a){ const name=a.find(x=>!x.startsWith('-')); const image=argVal(a,'--image');
+  if(!name||!image)return [L("usage: kubectl run <name> --image=<image>",'l-err')];
+  const st=imageOk(image)?'Running':'ImagePullBackOff';
+  state.pods.push({name,dep:null,image,status:st,restarts:0});
+  const out=[L('pod/'+name+' created','l-ok'),L("This is a *bare* pod — if it dies, nothing recreates it. Deployments are usually better.",'l-dim')];
+  if(st!=='Running')out.push(L("⚠ Check 'kubectl get pods' — that image may not pull.",'l-warn'));
+  return out; }
+function kAutoscale(a){ const t=a.find(x=>x.includes('/'))||a[a.findIndex(x=>/^deploy/.test(x))+1];
+  const name=t?t.split('/').pop():a.find(x=>!x.startsWith('-')&&!/^deploy/.test(x));
+  const dep=state.deployments.find(d=>d.name===name);
+  if(!dep)return [L('Error from server (NotFound): deployments.apps "'+name+'" not found','l-err')];
+  const min=parseInt(argVal(a,'--min'))||1,max=parseInt(argVal(a,'--max'))||5,cpu=parseInt(argVal(a,'--cpu-percent'))||80;
+  state.hpas=state.hpas.filter(h=>h.dep!==name); state.hpas.push({name,dep:name,min,max,cpu});
+  return [L('horizontalpodautoscaler.autoscaling/'+name+' autoscaled','l-ok'),
+    L("Now Kubernetes will add pods (up to "+max+") when CPU passes "+cpu+"%, and remove them when idle. See 'kubectl get hpa'.",'l-dim')]; }
+function kExec(a){ const it=a.includes('-it')||a.includes('-i'); const rest=a.filter(x=>!x.startsWith('-')&&x!=='--');
+  const p=state.pods.find(x=>x.name===rest[0])||state.pods.find(x=>x.name.startsWith(rest[0]||'###'));
+  if(!p)return [L('Error from server (NotFound): pods "'+(rest[0]||'')+'" not found','l-err')];
+  if(p.status!=='Running')return [L('error: cannot exec into a container in a "'+p.status+'" pod. Fix it first.','l-err')];
+  state.inContainer={id:p.name.slice(0,12),name:p.name};
+  return [L("You're now inside pod '"+p.name+"' (simulated). Try ls, whoami, hostname; 'exit' to leave.",'l-ok')]; }
+function kTop(a){ const kind=(a[0]||'pod').replace(/s$/,'');
+  if(kind==='node') return table(['NAME','CPU(cores)','CPU%','MEMORY','MEMORY%'],state.nodes.map(n=>[n.name,'240m','12%','1200Mi','30%']));
+  const pods=state.pods.filter(p=>p.status==='Running');
+  return pods.length?table(['NAME','CPU(cores)','MEMORY(bytes)'],pods.map(p=>[p.name,(1+Math.floor(Math.random()*40))+'m',(10+Math.floor(Math.random()*80))+'Mi'])):[L("(no running pods)",'l-dim')]; }
+function kConfig(a){
+  if(a[0]==='current-context') return [L(state.ctx,'l-info')];
+  if(a[0]==='get-contexts') return table(['CURRENT','NAME','CLUSTER'],state.contexts.map(c=>[c===state.ctx?'*':'',c,c]));
+  if(a[0]==='use-context'){ if(state.contexts.includes(a[1])){state.ctx=a[1]; return [L('Switched to context "'+a[1]+'".','l-ok')];} return [L('error: no context exists with the name: "'+(a[1]||'')+'"','l-err')]; }
+  if(a[0]==='view') return [L("apiVersion: v1",'l-dim'),L("current-context: "+state.ctx,'l-info'),L("contexts: "+state.contexts.join(', '),'l-dim')];
+  return [L("usage: kubectl config [current-context|get-contexts|use-context <name>|view]",'l-err')];
+}
+/* ---- Helm ---- */
+function helm(a){
+  const op=a[0];
+  if(op==='version') return [L('version.BuildInfo{Version:"v3.14.0"}','l-info')];
+  if(op==='repo'&&a[1]==='add') return [L('"'+(a[2]||'repo')+'" has been added to your repositories','l-ok')];
+  if(op==='repo'&&a[1]==='update') return [L('...Successfully got an update from all chart repositories','l-ok')];
+  if(op==='search') return table(['NAME','CHART VERSION','APP VERSION'],[['bitnami/nginx','15.5.0','1.25.3'],['bitnami/redis','18.6.1','7.2.4']]);
+  if(op==='install'){ const rel=a[1]||'my-release'; const chart=a[2]||'chart';
+    state.helmReleases.push({name:rel,chart}); const dn=rel;
+    let dep=state.deployments.find(d=>d.name===dn); if(!dep){dep={name:dn,image:'nginx:1.25',replicas:1,hash:rnd(4),container:'nginx'};state.deployments.push(dep);reconcile(dep);}
+    if(!state.services.find(s=>s.name===dn))state.services.push({name:dn,type:'ClusterIP',clusterIP:'10.96.'+Math.floor(Math.random()*250)+'.5',port:'80',nodePort:null,selector:'app='+dn});
+    return [L('NAME: '+rel,'l-ok'),L('STATUS: deployed','l-ok'),
+      L("✓ Helm installed the whole app (Deployment + Service + config) from one chart. See 'kubectl get all'.",'l-dim')]; }
+  if(op==='list'||op==='ls') return state.helmReleases.length?table(['NAME','CHART','STATUS'],state.helmReleases.map(r=>[r.name,r.chart,'deployed'])):[L("(no releases installed — try 'helm install my-web bitnami/nginx')",'l-dim')];
+  if(op==='uninstall'){ state.helmReleases=state.helmReleases.filter(r=>r.name!==a[1]); return [L('release "'+(a[1]||'')+'" uninstalled','l-ok')]; }
+  return [L("Helm is the package manager for Kubernetes. Try: helm repo add / search / install / list / uninstall",'l-dim')];
+}
+/* ---- Cloud CLIs (managed clusters) ---- */
+function provisionCluster(provider,name,ctxName){
+  state.cloud=provider;
+  if(!state.contexts.includes(ctxName))state.contexts.push(ctxName);
+  state.ctx=ctxName;
+  state.nodes=[{name:'node-1',status:'Ready',roles:'<none>',age:'2m',ver:'v1.29.2'},
+               {name:'node-2',status:'Ready',roles:'<none>',age:'2m',ver:'v1.29.2'}];
+}
+function cloud(cmd,a){
+  if(cmd==='eksctl'){
+    if(a[0]==='create'&&a[1]==='cluster'){ const n=argVal(a,'--name')||'my-cluster';
+      provisionCluster('aws',n,n+'.eks');
+      return [L("[ℹ] creating EKS cluster \""+n+"\" (the control plane is fully managed by AWS)",'l-dim'),
+        L("[ℹ] building cluster stack, creating managed nodegroup...",'l-dim'),
+        L("[✓] EKS cluster \""+n+"\" is ready — kubectl is now pointed at it.",'l-ok'),
+        L("Notice: you never installed or patched the control plane. That's the ‘managed’ difference.",'l-dim')]; }
+    return [L("eksctl: manage EKS clusters. Try: eksctl create cluster --name demo","l-dim")];
+  }
+  if(cmd==='az'){
+    if(a[0]==='aks'&&a[1]==='create'){ const n=argVal(a,'--name')||argVal(a,'-n')||'my-aks';
+      return [L("Creating AKS cluster '"+n+"' ... (Azure manages the control plane for free)",'l-dim'),L("✓ AKS cluster '"+n+"' created. Now run: az aks get-credentials -g <rg> -n "+n,'l-ok')]; }
+    if(a[0]==='aks'&&a[1]==='get-credentials'){ const n=argVal(a,'--name')||argVal(a,'-n')||'my-aks';
+      provisionCluster('azure',n,n); return [L("Merged \""+n+"\" as current context in ~/.kube/config",'l-ok'),L("kubectl now talks to your managed AKS cluster.",'l-dim')]; }
+    return [L("az aks: manage Azure Kubernetes Service. Try: az aks create -g rg -n demo, then az aks get-credentials -g rg -n demo","l-dim")];
+  }
+  if(cmd==='gcloud'){
+    if(a[0]==='container'&&a[1]==='clusters'&&a[2]==='create'){ const n=a[3]||'my-gke';
+      return [L("Creating cluster "+n+" ... (GKE manages the control plane)",'l-dim'),L("✓ Cluster "+n+" created. Now run: gcloud container clusters get-credentials "+n,'l-ok')]; }
+    if(a[0]==='container'&&a[1]==='clusters'&&a[2]==='get-credentials'){ const n=a[3]||'my-gke';
+      provisionCluster('gcp',n,'gke_'+n); return [L("Fetching cluster endpoint and auth data.",'l-dim'),L("kubeconfig entry generated for "+n+".",'l-ok')]; }
+    if(a[0]==='run'&&a[1]==='deploy'){ const n=a[2]||'my-svc';
+      return [L("Deploying container to Cloud Run service ["+n+"]...",'l-dim'),L("✓ Service ["+n+"] deployed and serving 100% of traffic.",'l-ok'),
+        L("Service URL: https://"+n+"-"+rnd(6)+"-uc.a.run.app  (fully managed — no servers, scales to zero).",'l-info')]; }
+    return [L("gcloud: Google Cloud CLI. Try: gcloud container clusters create demo","l-dim")];
+  }
+  if(cmd==='aws'){
+    if(a[0]==='eks'&&a[1]==='update-kubeconfig'){ const n=argVal(a,'--name')||'my-cluster';
+      provisionCluster('aws',n,'arn:aws:eks:'+n); return [L("Added new context arn:aws:eks:us-east-1:...:cluster/"+n+" to ~/.kube/config",'l-ok'),L("kubectl now talks to your managed EKS cluster.",'l-dim')]; }
+    if(a[0]==='ecr'&&a[1]==='create-repository') return [L('{ "repository": { "repositoryUri": "1234.dkr.ecr.us-east-1.amazonaws.com/'+ (argVal(a,'--repository-name')||'myapp') +'" } }','l-info'),L("✓ Managed registry (ECR) repo created. Push images here instead of your own server.",'l-ok')];
+    if(a[0]==='ecr'&&a[1]==='get-login-password') return [L("<auth-token>",'l-dim'),L("Pipe this into 'docker login' to push to ECR: aws ecr get-login-password | docker login --username AWS --password-stdin <uri>",'l-dim')];
+    return [L("aws: AWS CLI. Try: aws eks update-kubeconfig --name demo","l-dim")];
+  }
+  return [L(cmd+": not recognized in this lab.",'l-err')];
+}
+
+/* ============================================================
+   COMMAND ROUTER
+   ============================================================ */
+function runCommand(raw){
+  const cmd=raw.trim();
+  echo(raw);
+  if(state.inContainer){ print(insideShell(cmd)); return finish(cmd); }
+  if(cmd===''){ return; }
+  if(cmd==='clear'||cmd==='cls'){ document.getElementById('termBody').innerHTML=''; return; }
+  if(cmd==='reset'){ resetEnv(); return; }
+  if(cmd==='help'){ print([L("This is a simulated shell for learning.",'l-head'),
+    L("Try Docker (docker run, docker ps, ...) or Kubernetes (kubectl get pods, ...) commands.",'l-info'),
+    L("'clear' to clear • '↻ reset env' to start fresh.",'l-dim')]); return; }
+  const parts=cmd.split(/\s+/);
+  let out;
+  if(parts[0]==='docker') out=docker(parts.slice(1));
+  else if(parts[0]==='kubectl'||parts[0]==='k') out=kubectl(parts.slice(1));
+  else if(parts[0]==='helm') out=helm(parts.slice(1));
+  else if(['eksctl','az','gcloud','aws'].includes(parts[0])) out=cloud(parts[0],parts.slice(1));
+  else if(parts[0]==='minikube'){ out=[L(cmd.includes('start')?"minikube: cluster already running ✓":"minikube v1.32 — the local self-managed cluster is simulated and already up.",'l-ok')]; }
+  else if(['ls','pwd','whoami','cd','echo'].includes(parts[0])) out=[L("This lab focuses on container commands. Try docker / kubectl / helm, or a cloud CLI (eksctl, az, gcloud). Type 'help'.",'l-dim')];
+  else out=[L(parts[0]+": command not found",'l-err'),L("Try docker, kubectl, helm, or a cloud CLI (eksctl/az/gcloud/aws). Type 'help'.",'l-dim')];
+  print(out);
+  finish(cmd);
+}
+function finish(cmd){
+  updatePrompt();
+  const lesson=LESSONS[cur];
+  if(lesson && !lesson.done && lesson.check){
+    try{ if(lesson.check(cmd.trim().replace(/\s+/g,' '), state)){ complete(cur); } }catch(e){}
+  }
+}
+
+/* ============================================================
+   TERMINAL UI
+   ============================================================ */
+function echo(raw){
+  const b=document.getElementById('termBody');
+  const div=document.createElement('div');
+  div.className='line l-cmd';
+  const pr=state.inContainer?('root@'+state.inContainer.id+':/# '):'$ ';
+  div.innerHTML='<span class="pr'+(state.inContainer?' ctr':'')+'">'+pr+'</span>'+escapeHtml(raw);
+  b.appendChild(div); b.scrollTop=b.scrollHeight;
+}
+function print(lines){
+  const b=document.getElementById('termBody');
+  lines.forEach(l=>{ const d=document.createElement('div'); d.className='line '+l.c; d.textContent=l.t; b.appendChild(d); });
+  b.scrollTop=b.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function updatePrompt(){
+  const pr=document.getElementById('prompt');
+  if(state.inContainer){ pr.textContent='root@'+state.inContainer.id+':/#'; pr.className='pr ctr'; }
+  else { pr.textContent='$'; pr.className='pr'; }
+}
+function resetEnv(){
+  state=freshState(); nameI=0;
+  document.getElementById('termBody').innerHTML='';
+  print([L("Environment reset. A machine with Docker + a local (self-managed) Kubernetes cluster is ready.",'l-ok'),
+    L("Practice any command: docker · kubectl · helm · or cloud CLIs (eksctl, az, gcloud, aws). Type 'help' anytime.",'l-dim')]);
+  updatePrompt();
+}
+
+/* ============================================================
+   CURRICULUM
+   ============================================================ */
+const m=(re)=>(c)=>re.test(c);
+
+function buildLessons(){ return [].concat(_dSelf(),_dCloud(),_kSelf(),_kCloud()); }
+
+function _dSelf(){ const T='docker',G='self'; return [
+{track:T,group:G,sec:'Foundations',title:'What is a container?',
+ concept:`<p>A <b>container</b> is a lightweight box holding an app plus everything it needs to run, so it runs the same everywhere.</p><div class="analogy"><b>Analogy:</b> a container is a <b>lunchbox</b> — pack it once, it works wherever you take it.</div><p>An <b>image</b> is the recipe; a <b>container</b> is a running meal made from it.</p>`,
+ task:`<p>Just absorb the idea, then continue.</p>`,
+ docs:[['Docker overview','https://docs.docker.com/get-started/docker-overview/']],issues:[]},
+
+{track:T,group:G,sec:'Foundations',title:'Docker architecture',
+ concept:`<p>Three pieces work together: the <b>Docker client</b> (the <code>docker</code> command you type), the <b>daemon</b> (the background engine that builds and runs containers), and a <b>registry</b> (where images are stored, like Docker Hub).</p><p>When you run a command, the client asks the daemon, which pulls images from the registry and runs containers.</p>`,
+ task:`<p>Concept only — continue when it clicks.</p>`,
+ docs:[['Docker Engine','https://docs.docker.com/engine/']],issues:[]},
+
+{track:T,group:G,sec:'Foundations',title:'Install &amp; verify',
+ concept:`<p>The <b>Docker daemon</b> is a background service; the <code>docker</code> command talks to it. On your own server you install Docker Engine; first thing you always check is that it responds.</p>`,
+ task:`<p>Ask Docker its version:</p>`,cmd:'docker --version',check:m(/^docker (--version|-v|version)$/),
+ docs:[['Install Docker Engine','https://docs.docker.com/engine/install/']],
+ issues:[{p:'Cannot connect to the Docker daemon',c:'The engine isn’t running.',f:'Start it: <code>sudo systemctl start docker</code> (or open Docker Desktop).'},
+   {p:'permission denied /var/run/docker.sock',c:'Your user can’t reach Docker.',f:'<code>sudo usermod -aG docker $USER</code>, then re-login.'}]},
+
+{track:T,group:G,sec:'Images',title:'Images, layers &amp; tags',
+ concept:`<p>An <b>image</b> is built from stacked <b>layers</b> (each build step adds one), which makes them cache-friendly and small to update. A <b>tag</b> (like <code>nginx:1.25</code>) picks a version — <code>latest</code> is just the default tag.</p>`,
+ task:`<p>Download the nginx image, then list your images:</p>`,cmd:'docker pull nginx',check:m(/^docker (pull \S+|images)/),
+ docs:[['Docker Hub &amp; images','https://docs.docker.com/docker-hub/']],
+ issues:[{p:'manifest for … not found',c:'That tag doesn’t exist.',f:'Check the tag; use one that exists (e.g. <code>nginx:1.25</code>).'}]},
+
+{track:T,group:G,sec:'First containers',title:'Your first container',
+ concept:`<p><code>docker run</code> starts a container from an image. <b>hello-world</b> is a tiny test image that prints a message and exits — a container that finishes its job stops, and that’s normal.</p>`,
+ task:`<p>Run the test container:</p>`,cmd:'docker run hello-world',check:m(/^docker run .*hello-world/),
+ docs:[['docker run','https://docs.docker.com/reference/cli/docker/container/run/']],
+ issues:[{p:'Unable to find image … pull access denied',c:'Typo, or it needs a login.',f:'Fix the spelling, or <code>docker login</code> for private images.'}]},
+
+{track:T,group:G,sec:'First containers',title:'Run a web server: ports &amp; detached',
+ concept:`<p><b>nginx</b> is a real web server. <code>-d</code> runs it in the background; <code>-p 8080:80</code> maps your port 8080 to port 80 inside.</p><div class="analogy"><b>Port mapping</b> = a mailbox: 8080 outside, 80 inside.</div>`,
+ task:`<p>Start nginx in the background on port 8080:</p>`,cmd:'docker run -d -p 8080:80 nginx',
+ check:m(/^docker run .*-d.*-p ?8080:80.*nginx|^docker run .*nginx.*-p ?8080:80/),
+ docs:[['Port publishing','https://docs.docker.com/engine/network/#published-ports']],
+ issues:[{p:'port is already allocated',c:'That host port is taken.',f:'Use another, e.g. <code>-p 8081:80</code>.'}]},
+
+{track:T,group:G,sec:'Living with containers',title:'Lifecycle: ps, logs, stop, rm, restart',
+ concept:`<p><code>docker ps</code> lists running containers (add <code>-a</code> for stopped). <code>docker logs</code> shows output, <code>docker stop</code>/<code>rm</code> stop and remove. A <b>restart policy</b> (<code>--restart always</code>) makes Docker relaunch a container if it crashes or the host reboots.</p>`,
+ task:`<p>List what’s running:</p>`,cmd:'docker ps',check:m(/^docker ps/),
+ docs:[['docker ps','https://docs.docker.com/reference/cli/docker/container/ls/'],['Restart policies','https://docs.docker.com/engine/containers/start-containers-automatically/']],
+ issues:[{p:'My container isn’t listed',c:'It stopped.',f:'<code>docker ps -a</code> shows stopped ones too.'},
+   {p:'Container keeps exiting',c:'No long-running process.',f:'Give it a command that stays running, or use a service image like nginx.'}]},
+
+{track:T,group:G,sec:'Living with containers',title:'Step inside a container',
+ concept:`<p><code>docker exec -it &lt;name&gt; sh</code> opens a shell <i>inside</i> a running container so you can look around. Type <code>ls</code>, <code>whoami</code>, then <code>exit</code>.</p>`,
+ task:`<p>Exec into your nginx container (use its name from <code>docker ps</code>), then <code>exit</code>:</p>`,cmd:'docker exec -it <name> sh',check:(c)=>/^exit$/.test(c),
+ docs:[['docker exec','https://docs.docker.com/reference/cli/docker/container/exec/']],
+ issues:[{p:'container is not running',c:'Can’t exec into a stopped one.',f:'<code>docker start &lt;name&gt;</code> first.'},
+   {p:'"bash" not found',c:'Minimal images lack bash.',f:'Use <code>sh</code> instead.'}]},
+
+{track:T,group:G,sec:'Living with containers',title:'Inspect &amp; monitor',
+ concept:`<p><code>docker inspect &lt;name&gt;</code> prints the full config and state as JSON (image, env, network, health). <code>docker stats</code> shows live CPU/memory per container.</p>`,
+ task:`<p>Inspect your running container (use its name):</p>`,cmd:'docker inspect <name>',check:m(/^docker (inspect \S+|stats)/),
+ docs:[['docker inspect','https://docs.docker.com/reference/cli/docker/inspect/']],
+ issues:[{p:'No such object',c:'Wrong name/ID.',f:'Copy it from <code>docker ps</code>.'}]},
+
+{track:T,group:G,sec:'Configuration',title:'Environment variables',
+ concept:`<p>Apps are configured with <b>environment variables</b>. Pass them at run time with <code>-e KEY=value</code> — the same image behaves differently per environment without rebuilding.</p>`,
+ task:`<p>Run a container with an env var:</p>`,cmd:'docker run -d -e APP_MODE=prod --name cfg nginx',check:m(/^docker run .*-e ?\S+=\S+/),
+ docs:[['Environment variables','https://docs.docker.com/reference/cli/docker/container/run/#env']],issues:[]},
+
+{track:T,group:G,sec:'Data',title:'Data persistence: volumes',
+ concept:`<p>When a container is removed, its writable layer is gone. <b>Volumes</b> store data <i>outside</i> the container so it survives. Create one, then mount it with <code>-v name:/path</code>.</p><div class="analogy">Volume = an external hard drive you plug into any container.</div>`,
+ task:`<p>Create a volume named <code>data</code>:</p>`,cmd:'docker volume create data',check:(c,s)=>s.volumes.includes('data')||/^docker run .*-v ?\S+:/.test(c),
+ docs:[['Volumes','https://docs.docker.com/engine/storage/volumes/']],
+ issues:[{p:'My data vanished after removing the container',c:'It wasn’t on a volume.',f:'Mount a volume: <code>-v data:/var/lib/mysql</code>.'}]},
+
+{track:T,group:G,sec:'Networking',title:'Container networking',
+ concept:`<p>By default containers sit on a <b>bridge</b> network. Create a <b>custom network</b> and containers on it can reach each other <i>by name</i> — how multi-service apps talk internally.</p>`,
+ task:`<p>Create a custom network called <code>app-net</code>:</p>`,cmd:'docker network create app-net',check:(c,s)=>s.networks.some(n=>n.name==='app-net'),
+ docs:[['Networking overview','https://docs.docker.com/engine/network/']],
+ issues:[{p:'Containers can’t reach each other',c:'They’re on different networks, or you used an IP.',f:'Put them on the same custom network and connect by <b>name</b>.'}]},
+
+{track:T,group:G,sec:'Building images',title:'Dockerfile deep dive',
+ concept:`<p>A <b>Dockerfile</b> is the recipe. Key instructions: <code>FROM</code> (base), <code>WORKDIR</code>, <code>COPY</code>, <code>RUN</code> (build-time), <code>ENV</code>, <code>EXPOSE</code>, and <code>CMD</code>/<code>ENTRYPOINT</code> (what runs at start). Order matters for caching.</p><pre class="file"><span class="kw">FROM</span> node:20-alpine
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> package.json .
+<span class="kw">RUN</span> npm install
+<span class="kw">COPY</span> . .
+<span class="kw">CMD</span> [<span class="st">"node","server.js"</span>]</pre>`,
+ task:`<p>Concept — continue, then you’ll build one.</p>`,
+ docs:[['Dockerfile reference','https://docs.docker.com/reference/dockerfile/']],issues:[]},
+
+{track:T,group:G,sec:'Building images',title:'Build your own image',
+ concept:`<p><code>docker build -t myapp .</code> reads the Dockerfile in the current folder and produces an image named <code>myapp</code>, ready to run anywhere.</p>`,
+ task:`<p>Build an image named <code>myapp</code>:</p>`,cmd:'docker build -t myapp .',check:m(/^docker build .*-t ?\S+/),
+ docs:[['docker build','https://docs.docker.com/reference/cli/docker/buildx/build/']],
+ issues:[{p:'COPY failed: file not found',c:'A path in the Dockerfile is wrong.',f:'Match paths to your project layout.'}]},
+
+{track:T,group:G,sec:'Building images',title:'Multi-stage builds &amp; .dockerignore',
+ concept:`<p><b>Multi-stage builds</b> use one stage to compile and a small final stage to run, so the shipped image is tiny and secure. A <b>.dockerignore</b> file keeps junk (node_modules, .git) out of the build for speed.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['Multi-stage builds','https://docs.docker.com/build/building/multi-stage/'],['Build best practices','https://docs.docker.com/build/building/best-practices/']],issues:[]},
+
+{track:T,group:G,sec:'Operations',title:'Healthchecks &amp; resource limits',
+ concept:`<p>A <b>HEALTHCHECK</b> lets Docker know if the app inside is actually healthy, not just running. <b>Resource limits</b> (<code>--memory</code>, <code>--cpus</code>) stop one container from starving the host.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['HEALTHCHECK','https://docs.docker.com/reference/dockerfile/#healthcheck'],['Resource limits','https://docs.docker.com/engine/containers/resource_constraints/']],issues:[]},
+
+{track:T,group:G,sec:'Multi-container',title:'Docker Compose',
+ concept:`<p>Real apps have several containers (web + database + cache). <b>Docker Compose</b> defines them all in one <code>docker-compose.yml</code> and starts them together with one command. They share a network and find each other by name.</p><pre class="file"><span class="kw">services:</span>
+  <span class="kw">web:</span> { <span class="kw">image:</span> nginx, <span class="kw">ports:</span> [<span class="st">"8080:80"</span>] }
+  <span class="kw">db:</span>  { <span class="kw">image:</span> postgres:16 }</pre>`,
+ task:`<p>Start the sample multi-container app:</p>`,cmd:'docker compose up -d',check:(c,s)=>s.compose===true,
+ docs:[['Docker Compose','https://docs.docker.com/compose/']],
+ issues:[{p:'web can’t reach db',c:'Wrong hostname.',f:'Use the service name (<code>db</code>) as the hostname — Compose wires up DNS.'}]},
+
+{track:T,group:G,sec:'Operations',title:'Cleanup &amp; disk',
+ concept:`<p>Stopped containers and old images pile up. <code>docker system df</code> shows usage; <code>docker system prune</code> reclaims space by deleting unused stuff.</p>`,
+ task:`<p>Free up space:</p>`,cmd:'docker system prune',check:m(/^docker system (prune|df)/),
+ docs:[['Prune / reclaim space','https://docs.docker.com/engine/manage-resources/pruning/']],
+ issues:[{p:'no space left on device',c:'Disk full of old images/containers.',f:'<code>docker system prune -a</code> (careful — removes unused images too).'}]},
+
+{track:T,group:G,sec:'Troubleshooting',title:'🔧 Challenge: the port conflict',
+ concept:`<p>Hit a real error on purpose and fix it. Start one container on port 8080, try a second on the same port, read the error, then fix it with a different port.</p>`,
+ task:`<p>1) <code>docker run -d -p 8080:80 --name web1 nginx</code><br>2) <code>docker run -d -p 8080:80 --name web2 nginx</code> → fails<br>3) fix: <code>docker run -d -p 8081:80 --name web2 nginx</code></p>`,
+ cmd:'docker run -d -p 8080:80 --name web1 nginx',check:(c,s)=>s.containers.some(x=>x.name==='web2'&&x.status==='Up'),
+ docs:[['Published ports','https://docs.docker.com/engine/network/#published-ports']],
+ issues:[{p:'port is already allocated',c:'Two containers can’t share a host port.',f:'Give web2 a different host port: <code>-p 8081:80</code>.'},
+   {p:'name "/web2" already in use',c:'Leftover from the failed run.',f:'<code>docker rm web2</code>, then run again.'}]},
+];}
+
+function _dCloud(){ const T='docker',G='cloud'; return [
+{track:T,group:G,sec:'Registries',title:'Registries &amp; Docker Hub: push an image',
+ concept:`<p>A <b>registry</b> is a cloud store for images. To share yours you <code>login</code>, <code>tag</code> it with your username, then <code>push</code>. Anyone (with access) can then <code>pull</code> it anywhere.</p>`,
+ task:`<p>1) <code>docker login</code><br>2) <code>docker tag myapp youruser/myapp:1.0</code><br>3) <code>docker push youruser/myapp:1.0</code></p>`,
+ cmd:'docker push youruser/myapp:1.0',check:m(/^docker push \S+\/\S+/),
+ docs:[['Docker Hub','https://docs.docker.com/docker-hub/'],['docker push','https://docs.docker.com/reference/cli/docker/image/push/']],
+ issues:[{p:'denied: requested access to the resource is denied',c:'Not logged in, or image not tagged with your username.',f:'<code>docker login</code>, then tag as <code>youruser/name</code> before pushing.'}]},
+
+{track:T,group:G,sec:'Managed services',title:'Run containers in the cloud (managed)',
+ concept:`<p>Instead of running Docker on your own server, hand the container to a <b>managed service</b> and it runs, scales, and heals it for you — no servers to patch. Examples: <b>AWS ECS/Fargate</b>, <b>Google Cloud Run</b>, <b>Azure Container Instances</b>.</p><div class="analogy">Self-managed = you own the kitchen. Managed = you hand over the recipe and they cook &amp; serve.</div>`,
+ task:`<p>Deploy a container to a fully-managed service (Cloud Run):</p>`,cmd:'gcloud run deploy my-svc --image=youruser/myapp:1.0',check:m(/^gcloud run deploy/),
+ docs:[['AWS Fargate','https://docs.aws.amazon.com/AmazonECS/latest/userguide/what-is-fargate.html'],['Google Cloud Run','https://cloud.google.com/run/docs'],['Azure Container Instances','https://learn.microsoft.com/azure/container-instances/']],
+ issues:[{p:'Which one should I pick?',c:'They overlap.',f:'Cloud Run / Fargate = serverless containers (scale to zero). ECS = more control. ACI = quick single containers on Azure.'}]},
+
+{track:T,group:G,sec:'Managed services',title:'Managed registries (ECR / ACR / GAR)',
+ concept:`<p>Clouds host private registries integrated with their IAM: <b>ECR</b> (AWS), <b>ACR</b> (Azure), <b>Artifact Registry</b> (Google). You push images there and your cloud workloads pull them securely, controlled by cloud permissions rather than passwords.</p>`,
+ task:`<p>Create a managed registry repository:</p>`,cmd:'aws ecr create-repository --repository-name myapp',check:m(/^aws ecr create-repository/),
+ docs:[['Amazon ECR','https://docs.aws.amazon.com/AmazonECR/latest/userguide/'],['Azure ACR','https://learn.microsoft.com/azure/container-registry/'],['Artifact Registry','https://cloud.google.com/artifact-registry/docs']],
+ issues:[{p:'Push works but the cluster can’t pull',c:'Missing registry permissions.',f:'Grant the workload’s cloud identity pull access (IAM role / managed identity), not a static password.'}]},
+];}
+
+function _kSelf(){ const T='k8s',G='self'; return [
+{track:T,group:G,sec:'Foundations',title:'Why Kubernetes?',
+ concept:`<p>Docker runs containers on one machine. Real systems need many containers across many machines, staying up 24/7. <b>Kubernetes</b> is the manager that does that.</p><div class="analogy"><b>Analogy:</b> a <b>restaurant manager</b> — you say “always keep 3 chefs working”; if one quits, it hires a replacement instantly. You declare the goal; K8s keeps it true.</div>`,
+ task:`<p>Absorb the “declare desired state” idea, then continue.</p>`,
+ docs:[['Kubernetes overview','https://kubernetes.io/docs/concepts/overview/']],issues:[]},
+
+{track:T,group:G,sec:'Foundations',title:'Architecture: control plane + nodes',
+ concept:`<p>A cluster has a <b>control plane</b> (the brain) and <b>worker nodes</b> (where apps run). Control plane parts: <b>API server</b> (front door), <b>etcd</b> (the database of desired state), <b>scheduler</b> (places pods), <b>controller manager</b> (keeps reality matching desired). Each node runs the <b>kubelet</b> (agent), <b>kube-proxy</b> (networking), and a container runtime.</p>`,
+ task:`<p>Concept — continue. In self-managed clusters, <b>you</b> run and patch the control plane.</p>`,
+ docs:[['Cluster components','https://kubernetes.io/docs/concepts/overview/components/']],issues:[]},
+
+{track:T,group:G,sec:'Foundations',title:'Self-managed cluster options',
+ concept:`<p>Running your own cluster (on-prem or on VMs): <b>minikube</b> / <b>kind</b> for local learning, <b>kubeadm</b> for production-grade DIY clusters, <b>k3s</b> for lightweight/edge. You own upgrades, backups of etcd, and node health.</p>`,
+ task:`<p>Your local cluster is already up. Confirm it:</p>`,cmd:'minikube start',check:m(/^minikube start/),
+ docs:[['Install tools','https://kubernetes.io/docs/setup/'],['minikube','https://minikube.sigs.k8s.io/docs/'],['kubeadm','https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/']],issues:[]},
+
+{track:T,group:G,sec:'Basics',title:'kubectl &amp; contexts',
+ concept:`<p><code>kubectl</code> is how you talk to a cluster. A <b>context</b> in your kubeconfig says <i>which</i> cluster you’re pointing at — vital once you juggle local + cloud clusters.</p>`,
+ task:`<p>See which cluster you’re talking to:</p>`,cmd:'kubectl config current-context',check:m(/^kubectl config (current-context|get-contexts)/),
+ docs:[['kubeconfig &amp; contexts','https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/'],['kubectl','https://kubernetes.io/docs/reference/kubectl/']],
+ issues:[{p:'Commands hit the wrong cluster',c:'Wrong context selected.',f:'<code>kubectl config use-context &lt;name&gt;</code>.'}]},
+
+{track:T,group:G,sec:'Basics',title:'Cluster nodes',
+ concept:`<p>Nodes are the machines that run your workloads. Check they’re healthy before deploying.</p>`,
+ task:`<p>List the machines in your cluster:</p>`,cmd:'kubectl get nodes',check:m(/^kubectl get (nodes?|no)$/),
+ docs:[['Nodes','https://kubernetes.io/docs/concepts/architecture/nodes/']],
+ issues:[{p:'connection refused',c:'Cluster down / wrong context.',f:'Start it (<code>minikube start</code>) and check the context.'},
+   {p:'node NotReady',c:'kubelet/network/disk issue.',f:'<code>kubectl describe node &lt;name&gt;</code>.'}]},
+
+{track:T,group:G,sec:'Workloads',title:'Pods',
+ concept:`<p>A <b>Pod</b> is the smallest unit — usually one container (sometimes a helper “sidecar”). You rarely create bare pods; controllers manage them for you.</p>`,
+ task:`<p>Run a single pod (note: nothing recreates a bare pod if it dies):</p>`,cmd:'kubectl run mypod --image=nginx',check:(c,s)=>s.pods.some(p=>p.name==='mypod'),
+ docs:[['Pods','https://kubernetes.io/docs/concepts/workloads/pods/']],issues:[]},
+
+{track:T,group:G,sec:'Workloads',title:'Deployments &amp; ReplicaSets',
+ concept:`<p>A <b>Deployment</b> is how you actually run apps: you say “run N copies of this image,” it creates a <b>ReplicaSet</b> that keeps that many <b>Pods</b> alive, and it handles updates.</p>`,
+ task:`<p>Create a deployment:</p>`,cmd:'kubectl create deployment nginx --image=nginx',check:(c,s)=>s.deployments.some(d=>d.name==='nginx'),
+ docs:[['Deployments','https://kubernetes.io/docs/concepts/workloads/controllers/deployment/'],['ReplicaSet','https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/']],
+ issues:[{p:'AlreadyExists',c:'Name taken.',f:'Delete it or pick another name.'}]},
+
+{track:T,group:G,sec:'Workloads',title:'See your pods',
+ concept:`<p>Watch <b>READY</b> (1/1 = healthy), <b>STATUS</b> (Running is good), and <b>RESTARTS</b> (rising = a warning).</p>`,
+ task:`<p>List your pods:</p>`,cmd:'kubectl get pods',check:m(/^kubectl get (pods?|po)/),
+ docs:[['kubectl cheatsheet','https://kubernetes.io/docs/reference/kubectl/cheatsheet/']],
+ issues:[{p:'stuck ContainerCreating',c:'Image pulling / volume waiting.',f:'<code>kubectl describe pod &lt;name&gt;</code> for the reason.'}]},
+
+{track:T,group:G,sec:'Metadata',title:'Labels &amp; selectors',
+ concept:`<p><b>Labels</b> are key/value tags on objects (e.g. <code>app=nginx</code>). <b>Selectors</b> filter by them — how Services find their Pods and how you query groups of resources.</p>`,
+ task:`<p>List pods with a label selector:</p>`,cmd:'kubectl get pods -l app=nginx',check:m(/^kubectl get pods? -l ?\S+/),
+ docs:[['Labels &amp; selectors','https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/']],issues:[]},
+
+{track:T,group:G,sec:'Organization',title:'Namespaces',
+ concept:`<p><b>Namespaces</b> split one cluster into isolated areas (dev / staging / prod, or per-team), so names and resources don’t collide. Target one with <code>-n &lt;ns&gt;</code>.</p>`,
+ task:`<p>Create a namespace:</p>`,cmd:'kubectl create namespace dev',check:(c,s)=>s.namespaces.includes('dev'),
+ docs:[['Namespaces','https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/']],issues:[]},
+
+{track:T,group:G,sec:'Networking',title:'Services: ClusterIP / NodePort / LoadBalancer',
+ concept:`<p>Pods get new IPs as they come and go, so you never talk to them directly. A <b>Service</b> is a stable address. <b>ClusterIP</b> = internal only; <b>NodePort</b> = opens a port on every node; <b>LoadBalancer</b> = asks the cloud for an external IP (stays pending on-prem).</p>`,
+ task:`<p>Expose your deployment on a NodePort:</p>`,cmd:'kubectl expose deployment nginx --port=80 --type=NodePort',check:(c,s)=>s.services.some(x=>x.name==='nginx'),
+ docs:[['Services','https://kubernetes.io/docs/concepts/services-networking/service/']],
+ issues:[{p:'Service has no endpoints',c:'Selector doesn’t match Pod labels.',f:'Make the Service selector equal the Pod labels.'},
+   {p:'Can’t reach it from my browser',c:'ClusterIP is internal.',f:'Use NodePort/LoadBalancer, or <code>kubectl port-forward</code>.'}]},
+
+{track:T,group:G,sec:'Networking',title:'Ingress',
+ concept:`<p>A <b>Service</b> exposes one app; an <b>Ingress</b> is a smart HTTP router in front of many Services — routing by hostname/path and handling TLS. It needs an <b>ingress controller</b> (e.g. nginx-ingress) running in the cluster.</p>`,
+ task:`<p>Apply the sample ingress:</p>`,cmd:'kubectl apply -f ingress.yaml',check:(c,s)=>s.ingresses.includes('web-ingress'),
+ docs:[['Ingress','https://kubernetes.io/docs/concepts/services-networking/ingress/']],
+ issues:[{p:'Ingress ADDRESS stays empty',c:'No ingress controller installed.',f:'Install one (e.g. ingress-nginx) — the controller does the actual routing.'}]},
+
+{track:T,group:G,sec:'Configuration',title:'ConfigMaps',
+ concept:`<p>Keep configuration out of your image with a <b>ConfigMap</b> — non-secret key/values pods read as env vars or files. Change config without rebuilding.</p>`,
+ task:`<p>Create a config map:</p>`,cmd:'kubectl create configmap app-config --from-literal=MODE=prod',check:(c,s)=>s.configmaps.some(x=>x.name==='app-config'),
+ docs:[['ConfigMaps','https://kubernetes.io/docs/concepts/configuration/configmap/']],issues:[]},
+
+{track:T,group:G,sec:'Configuration',title:'Secrets',
+ concept:`<p><b>Secrets</b> are like ConfigMaps but for sensitive values (passwords, tokens) — base64-encoded and access-controlled. Never bake secrets into images.</p>`,
+ task:`<p>Create a secret:</p>`,cmd:'kubectl create secret generic db-pass --from-literal=password=s3cret',check:(c,s)=>s.secrets.some(x=>x.name==='db-pass'),
+ docs:[['Secrets','https://kubernetes.io/docs/concepts/configuration/secret/']],
+ issues:[{p:'Is base64 secure?',c:'It’s encoding, not encryption.',f:'Enable encryption-at-rest for etcd and restrict access with RBAC; consider an external secrets manager.'}]},
+
+{track:T,group:G,sec:'Storage',title:'Volumes, PV, PVC &amp; StorageClass',
+ concept:`<p>Pods are ephemeral, so stateful apps need storage that outlives them. A <b>PersistentVolumeClaim (PVC)</b> requests storage; a <b>StorageClass</b> provisions a <b>PersistentVolume</b> automatically to satisfy it.</p>`,
+ task:`<p>Apply the sample PVC:</p>`,cmd:'kubectl apply -f pvc.yaml',check:(c,s)=>s.pvcs.includes('data-pvc'),
+ docs:[['Volumes','https://kubernetes.io/docs/concepts/storage/volumes/'],['Persistent Volumes','https://kubernetes.io/docs/concepts/storage/persistent-volumes/'],['StorageClasses','https://kubernetes.io/docs/concepts/storage/storage-classes/']],
+ issues:[{p:'PVC stuck Pending',c:'No StorageClass or no capacity.',f:'Ensure a default StorageClass exists (or one that can provision).'}]},
+
+{track:T,group:G,sec:'Scaling',title:'Scale up',
+ concept:`<p>Handle more traffic by asking for more copies. K8s creates the extra Pods and load-balances across them.</p>`,
+ task:`<p>Scale nginx to 3 replicas:</p>`,cmd:'kubectl scale deployment nginx --replicas=3',check:(c,s)=>s.deployments.some(d=>d.name==='nginx'&&d.replicas>=3),
+ docs:[['Scaling a Deployment','https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment']],
+ issues:[{p:'Pods Pending after scaling',c:'Not enough CPU/memory.',f:'Add capacity or lower resource requests.'}]},
+
+{track:T,group:G,sec:'Scaling',title:'Autoscaling (HPA)',
+ concept:`<p>The <b>Horizontal Pod Autoscaler</b> adds/removes pods automatically based on load (e.g. CPU %). You set the min, max, and target — K8s does the rest. Needs the metrics-server.</p>`,
+ task:`<p>Autoscale nginx between 2 and 5 pods at 70% CPU:</p>`,cmd:'kubectl autoscale deployment nginx --min=2 --max=5 --cpu-percent=70',check:(c,s)=>s.hpas.some(h=>h.dep==='nginx'),
+ docs:[['Horizontal Pod Autoscaling','https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/']],
+ issues:[{p:'HPA shows targets <unknown>',c:'No metrics-server.',f:'Install metrics-server so the HPA can read CPU/memory.'}]},
+
+{track:T,group:G,sec:'Reliability',title:'Health probes',
+ concept:`<p>Probes tell K8s if a container is OK: <b>liveness</b> (restart if stuck), <b>readiness</b> (only send traffic when ready), <b>startup</b> (grace period for slow starters). Without them, a hung app keeps getting traffic.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['Liveness/readiness/startup probes','https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/']],issues:[]},
+
+{track:T,group:G,sec:'Reliability',title:'Resource requests &amp; limits',
+ concept:`<p><b>Requests</b> = what a pod is guaranteed (used for scheduling). <b>Limits</b> = the ceiling (exceed memory → OOMKilled). Setting these keeps the cluster stable and fair.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['Manage resources for containers','https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/']],issues:[]},
+
+{track:T,group:G,sec:'Reliability',title:'Self-healing',
+ concept:`<p>Delete a Pod that belongs to a Deployment and K8s recreates it instantly — because you declared how many you want. This is the restaurant-manager idea in action.</p>`,
+ task:`<p>Copy a Pod NAME from <code>kubectl get pods</code>, delete it, then list again:</p>`,cmd:'kubectl delete pod <pod-name>',check:m(/^kubectl delete pods? \S+/),
+ docs:[['ReplicaSet (self-healing)','https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/']],
+ issues:[{p:'Count didn’t drop',c:'That’s the point — it healed.',f:'To reduce count, scale down or delete the Deployment.'}]},
+
+{track:T,group:G,sec:'Updates',title:'Rollouts &amp; rollbacks',
+ concept:`<p>Deployments update pods gradually (a <b>rolling update</b>) for zero downtime, and remember history so you can <b>roll back</b> instantly if a release goes bad.</p>`,
+ task:`<p>Roll back the nginx deployment to the previous version:</p>`,cmd:'kubectl rollout undo deployment/nginx',check:m(/^kubectl rollout (undo|status) /),
+ docs:[['Rolling updates &amp; rollback','https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment']],issues:[]},
+
+{track:T,group:G,sec:'Declarative',title:'Config from YAML manifests',
+ concept:`<p>Real teams store desired state in <b>YAML</b> in Git, then <code>kubectl apply -f</code> it (GitOps). Declarative, reviewable, repeatable.</p><pre class="file"><span class="kw">apiVersion:</span> apps/v1
+<span class="kw">kind:</span> Deployment
+<span class="kw">metadata:</span> { <span class="kw">name:</span> web }
+<span class="kw">spec:</span> { <span class="kw">replicas:</span> 3, ... }</pre>`,
+ task:`<p>Apply the sample manifest:</p>`,cmd:'kubectl apply -f nginx-deploy.yaml',check:(c,s)=>s.deployments.some(d=>d.name==='web'),
+ docs:[['Declarative management','https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/']],
+ issues:[{p:'unknown field / validation error',c:'YAML typo or indentation.',f:'<code>kubectl apply --dry-run=client -f file</code> to validate.'}]},
+
+{track:T,group:G,sec:'Workloads',title:'Workload types: StatefulSet, DaemonSet, Job, CronJob',
+ concept:`<p>Beyond Deployments: <b>StatefulSet</b> (stable identity + storage, for databases), <b>DaemonSet</b> (one pod per node, for agents), <b>Job</b> (run once to completion), <b>CronJob</b> (on a schedule).</p>`,
+ task:`<p>Apply a StatefulSet:</p>`,cmd:'kubectl apply -f statefulset.yaml',check:(c,s)=>s.statefulsets.includes('db'),
+ docs:[['StatefulSet','https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/'],['DaemonSet','https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/'],['Jobs','https://kubernetes.io/docs/concepts/workloads/controllers/job/'],['CronJob','https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/']],issues:[]},
+
+{track:T,group:G,sec:'Troubleshooting',title:'Debugging: describe, logs, exec, port-forward',
+ concept:`<p>Your toolkit: <code>describe</code> shows <b>events</b> (why it won’t start), <code>logs</code> shows what the app said (why it crashed), <code>exec</code> gets you a shell inside, <code>port-forward</code> lets you reach a pod locally.</p>`,
+ task:`<p>Describe one of your pods (copy its name):</p>`,cmd:'kubectl describe pod <pod-name>',check:m(/^kubectl (describe pods? \S+|logs \S+)/),
+ docs:[['Debug running pods','https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/'],['Port forwarding','https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/']],
+ issues:[{p:'CrashLoopBackOff',c:'App starts, errors, exits, repeat.',f:'Read <code>kubectl logs</code>; usually bad config/env.'},
+   {p:'OOMKilled',c:'Over memory limit.',f:'Raise the memory limit or fix the leak.'}]},
+
+{track:T,group:G,sec:'Packaging',title:'Helm (package manager)',
+ concept:`<p><b>Helm</b> is “apt/npm for Kubernetes.” A <b>chart</b> bundles all the YAML for an app; one <code>helm install</code> deploys the whole thing (Deployment + Service + config) with configurable values.</p>`,
+ task:`<p>Install a chart as a release:</p>`,cmd:'helm install my-web bitnami/nginx',check:(c,s)=>s.helmReleases.length>0,
+ docs:[['Helm docs','https://helm.sh/docs/']],issues:[]},
+
+{track:T,group:G,sec:'Security',title:'RBAC &amp; Network Policies',
+ concept:`<p><b>RBAC</b> controls <i>who</i> can do <i>what</i> (Roles + RoleBindings, tied to users/ServiceAccounts). <b>Network Policies</b> control which pods may talk to which — default-deny is a strong baseline for a bank.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['RBAC','https://kubernetes.io/docs/reference/access-authn-authz/rbac/'],['Service accounts','https://kubernetes.io/docs/concepts/security/service-accounts/'],['Network Policies','https://kubernetes.io/docs/concepts/services-networking/network-policies/']],issues:[]},
+
+{track:T,group:G,sec:'Troubleshooting',title:'🔧 Challenge: fix ImagePullBackOff',
+ concept:`<p>The most common real K8s error. Deploy with a typo’d image tag, watch it get stuck, diagnose with <code>describe</code>, and fix it.</p>`,
+ task:`<p>1) <code>kubectl create deployment web2 --image=nginx:latst</code><br>2) <code>kubectl get pods</code> → ImagePullBackOff<br>3) <code>kubectl describe pod &lt;web2-pod&gt;</code> (read Events)<br>4) fix: <code>kubectl set image deployment/web2 web2=nginx:latest</code></p>`,
+ cmd:'kubectl create deployment web2 --image=nginx:latst',
+ check:(c,s)=>{const d=s.deployments.find(x=>x.name==='web2');return d&&imageOk(d.image)&&s.pods.some(p=>p.dep==='web2'&&p.status==='Running');},
+ docs:[['Debug: ImagePullBackOff','https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/']],
+ issues:[{p:'ImagePullBackOff / ErrImagePull',c:'Wrong image name/tag.',f:'<code>kubectl set image deployment/web2 web2=nginx:latest</code>.'},
+   {p:'Still failing on a private image',c:'Missing registry credentials.',f:'Create an imagePullSecret and reference it.'}]},
+];}
+
+function _kCloud(){ const T='k8s',G='cloud'; return [
+{track:T,group:G,sec:'Managed',title:'Managed vs self-managed',
+ concept:`<p>With <b>managed Kubernetes</b> (EKS on AWS, AKS on Azure, GKE on Google), the cloud runs and patches the <b>control plane</b> for you — you just manage your apps and (usually) the worker nodes. Self-managed = you run everything, including the control plane and etcd backups.</p><div class="analogy">Self-managed = you maintain the engine. Managed = you drive; the manufacturer maintains the engine.</div>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['Amazon EKS','https://docs.aws.amazon.com/eks/'],['Azure AKS','https://learn.microsoft.com/azure/aks/'],['Google GKE','https://cloud.google.com/kubernetes-engine/docs']],issues:[]},
+
+{track:T,group:G,sec:'Managed',title:'Create a managed cluster',
+ concept:`<p>One command provisions a production-ready cluster with a managed control plane. Notice you never install or patch the control plane — that’s the value.</p>`,
+ task:`<p>Create a managed EKS cluster (or try <code>az aks create</code> / <code>gcloud container clusters create</code>):</p>`,cmd:'eksctl create cluster --name demo',check:(c,s)=>s.cloud!==null,
+ docs:[['eksctl','https://eksctl.io/'],['az aks create','https://learn.microsoft.com/azure/aks/learn/quick-kubernetes-deploy-cli'],['GKE quickstart','https://cloud.google.com/kubernetes-engine/docs/deploy-app-cluster']],
+ issues:[{p:'kubectl can’t reach the new cluster',c:'kubeconfig not updated.',f:'<code>aws eks update-kubeconfig --name demo</code> (or <code>az aks get-credentials</code> / <code>gcloud … get-credentials</code>).'}]},
+
+{track:T,group:G,sec:'Managed',title:'Cloud LoadBalancer gets a real IP',
+ concept:`<p>Here’s a concrete difference: on a managed cluster, a <code>type=LoadBalancer</code> Service makes the cloud provision a real external load balancer and hand you an <b>EXTERNAL-IP</b>. On-prem it stays <code>&lt;pending&gt;</code> because there’s no cloud LB.</p>`,
+ task:`<p>After creating a cloud cluster: deploy, expose as LoadBalancer, then check svc:<br><code>kubectl create deployment web --image=nginx</code><br><code>kubectl expose deployment web --port=80 --type=LoadBalancer</code><br><code>kubectl get svc</code></p>`,
+ cmd:'kubectl expose deployment web --port=80 --type=LoadBalancer',
+ check:(c,s)=>s.cloud&&s.services.some(x=>x.type==='LoadBalancer'),
+ docs:[['LoadBalancer Services','https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer']],
+ issues:[{p:'EXTERNAL-IP stuck <pending>',c:'On-prem, or no cloud LB integration.',f:'On bare metal use MetalLB or an ingress; in cloud ensure the cloud-controller is enabled.'}]},
+
+{track:T,group:G,sec:'Managed',title:'Node pools &amp; cluster autoscaling',
+ concept:`<p>Managed clusters group workers into <b>node pools</b> (e.g. a cheap pool + a GPU pool). The <b>cluster autoscaler</b> adds/removes <i>nodes</i> when pods can’t be scheduled or nodes sit idle — complementing the HPA, which scales <i>pods</i>.</p>`,
+ task:`<p>Concept — continue.</p>`,
+ docs:[['Cluster autoscaling','https://kubernetes.io/docs/concepts/cluster-administration/cluster-autoscaling/'],['EKS managed node groups','https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html']],issues:[]},
+
+{track:T,group:G,sec:'Managed',title:'Managed registries &amp; cloud IAM',
+ concept:`<p>In the cloud, image pulls and permissions use <b>cloud IAM</b>, not passwords. Workloads assume an identity (AWS <b>IRSA</b>, GKE <b>Workload Identity</b>, Azure workload identity) to pull from the managed registry (ECR/GAR/ACR) and access other cloud services securely.</p>`,
+ task:`<p>Concept — continue. Prep a managed registry with <code>aws ecr create-repository --repository-name myapp</code>.</p>`,
+ docs:[['IAM roles for service accounts (IRSA)','https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html'],['GKE Workload Identity','https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity']],issues:[]},
+];}
+
+/* ============================================================
+   APP WIRING
+   ============================================================ */
+let LESSONS_ALL=[], LESSONS=[], cur=0, curTrack='docker';
+function boot(){
+  LESSONS_ALL=buildLessons();
+  LESSONS_ALL.forEach(l=>l.done=false);
+  state=freshState();
+  setTrack('docker',true);
+  resetEnv();
+  const inp=document.getElementById('termInput');
+  let hist=[],hi=-1;
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ const v=inp.value; if(v.trim())hist.push(v); hi=hist.length; runCommand(v); inp.value=''; }
+    else if(e.key==='ArrowUp'){ if(hi>0){hi--;inp.value=hist[hi];} e.preventDefault(); }
+    else if(e.key==='ArrowDown'){ if(hi<hist.length-1){hi++;inp.value=hist[hi];}else{hi=hist.length;inp.value='';} e.preventDefault(); }
+  });
+  document.querySelector('.term-body').addEventListener('click',()=>inp.focus());
+}
+function setTrack(t,silent){
+  curTrack=t;
+  document.querySelectorAll('.tracks button').forEach(b=>b.classList.toggle('active',b.dataset.track===t));
+  const dl=document.getElementById('docsLink'); if(dl) dl.href = t==='docker'?'https://docs.docker.com/':'https://kubernetes.io/docs/home/';
+  LESSONS=LESSONS_ALL.filter(l=>l.track===t);
+  // map cur into this track: first not-done, else 0
+  const firstUndone=LESSONS.findIndex(l=>!l.done);
+  cur=firstUndone>=0?firstUndone:0;
+  renderSide(); renderLesson();
+}
+function renderSide(){
+  const side=document.getElementById('side'); side.innerHTML='';
+  let lastSec=null,lastGroup=null;
+  LESSONS.forEach((l,i)=>{
+    if(l.group!==lastGroup){
+      const g=document.createElement('div'); g.className='grouphdr';
+      g.innerHTML=(l.group==='cloud'?'☁ Cloud &middot; Managed':'🖥 Self-managed &middot; On-prem');
+      side.appendChild(g); lastGroup=l.group; lastSec=null;
+    }
+    if(l.sec!==lastSec){ const s=document.createElement('div'); s.className='sec'; s.textContent=l.sec; side.appendChild(s); lastSec=l.sec; }
+    const d=document.createElement('div'); d.className='item'+(i===cur?' active':'')+(l.done?' done':'');
+    d.innerHTML='<span class="tick"><svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="n">'+l.title+'</span>';
+    d.onclick=()=>{cur=i;renderSide();renderLesson();};
+    side.appendChild(d);
+  });
+  updateProgress();
+}
+function renderLesson(){
+  const l=LESSONS[cur]; const main=document.getElementById('main');
+  const total=LESSONS.length;
+  let html=`<div class="crumbs">${l.group==='cloud'?'☁ Cloud · Managed':'🖥 Self-managed · On-prem'} — ${l.sec}</div><h1>${l.title}</h1>
+    <div class="lesson-meta">Lesson ${cur+1} of ${total} · ${curTrack==='docker'?'Docker':'Kubernetes'} track</div>`;
+  html+=`<div class="mobile-note">The interactive terminal is hidden on small screens. Open this on a wider window (or desktop) to type commands. You can still read every lesson here.</div>`;
+  html+=`<div class="card concept"><span class="tag">● Concept</span>${l.concept}</div>`;
+  html+=`<div class="card task"><span class="tag">▶ Your turn</span>${l.task||''}`;
+  if(l.cmd){
+    html+=`<div class="do-cmd"><span class="p">$</span><code>${l.cmd.replace(/</g,'&lt;')}</code>
+      <button onclick="runSuggested()">Run it ▸</button></div>
+      <div class="steps-note">Type it yourself in the terminal, or click “Run it”. ${l.check?'Finish the task to unlock the tick.':''}</div>`;
+  } else {
+    html+=`<div class="steps-note" style="margin-top:6px">This is a concept step — read it, then continue.</div>`;
+  }
+  html+=`</div>`;
+  if(l.docs&&l.docs.length){
+    html+=`<div class="card docs"><span class="tag">📖 Official docs — read more if you get stuck</span><div class="doclinks">`;
+    l.docs.forEach(d=>{ html+=`<a href="${d[1]}" target="_blank" rel="noopener">${d[0]} ↗</a>`; });
+    html+=`</div></div>`;
+  }
+  if(l.issues&&l.issues.length){
+    html+=`<div class="card issues"><span class="tag">⚠ Real-world issues &amp; fixes</span>`;
+    l.issues.forEach(is=>{
+      html+=`<details class="issue"><summary><span class="err">${is.p}</span><span class="chev">▸</span></summary>
+        <div class="body"><span class="lbl">Why it happens:</span> ${is.c}<br><span class="lbl">Fix:</span> ${is.f}</div></details>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`<div class="navrow">
+    <button onclick="prevLesson()" ${cur===0?'disabled':''}>← Previous</button>
+    <div class="spacer"></div>`;
+  if(!l.cmd) html+=`<button class="primary" onclick="complete(${cur},true)">Got it — continue →</button>`;
+  else html+=`<button onclick="nextLesson()" ${cur===total-1?'disabled':''}>Skip / Next →</button>`;
+  html+=`</div>`;
+  main.innerHTML=html; main.scrollTop=0;
+}
+function runSuggested(){
+  const l=LESSONS[cur]; if(!l.cmd)return;
+  const inp=document.getElementById('termInput');
+  const first=l.cmd.split('\n')[0];
+  runCommand(first);
+  inp.focus();
+}
+function complete(globalOrLocal,advance){
+  // called with local index from render; find lesson object
+  const l=LESSONS[cur];
+  if(!l) return;
+  if(!l.done){ l.done=true; showToast(); }
+  renderSide();
+  if(advance){ if(cur<LESSONS.length-1){cur++;} renderSide(); renderLesson(); }
+  else renderSide();
+}
+function nextLesson(){ if(cur<LESSONS.length-1){cur++;renderSide();renderLesson();} }
+function prevLesson(){ if(cur>0){cur--;renderSide();renderLesson();} }
+function updateProgress(){
+  const done=LESSONS_ALL.filter(l=>l.done).length, tot=LESSONS_ALL.length;
+  const pct=Math.round(done/tot*100);
+  document.getElementById('pctText').textContent=pct+'%';
+  const circ=2*Math.PI*16;
+  document.getElementById('ringFill').style.strokeDasharray=circ;
+  document.getElementById('ringFill').style.strokeDashoffset=circ-(circ*pct/100);
+}
+let toastT;
+function showToast(){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent='Nice! Lesson complete.';
+  t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+boot();
+</script>
+</body>
+</html>
